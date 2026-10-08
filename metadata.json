@@ -1,0 +1,6 @@
+{
+  "name": "G-ORA-VODS",
+  "description": "G-ORA-VODS: Professional AI voice-over generator for videos and automation with Gemini TTS, emotion styles, Indian accents, and API integrations.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
