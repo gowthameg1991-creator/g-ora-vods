@@ -25,6 +25,11 @@ import {
   Key,
   ExternalLink,
   X,
+  Globe2,
+  Mic2,
+  Gauge,
+  SlidersHorizontal,
+  FileText,
 } from 'lucide-react';
 import {
   VoiceOption,
@@ -50,22 +55,23 @@ import {
   base64ToWavArrayBuffer,
   processAudio,
   cleanScriptDirections,
+  parseScriptSections,
 } from './utils/audioEngine';
 import { wavBlobToMp3Blob } from './utils/wavUtils';
 
 export default function App() {
   // State
-  const [script, setScript] = useState<string>(
-    `Quinn found a note...\n\nwritten in her own handwriting.\n\n[PAUSE 2]\n\nIt said:\n\n"Do NOT look under the table."\n\n[PAUSE 3]`
-  );
+  const [script, setScript] = useState<string>('');
   const [selectedVoice, setSelectedVoice] = useState<VoiceOption>(
-    GEMINI_VOICES.find((v) => v.id === 'Vindemiatrix') || GEMINI_VOICES[0]
+    GEMINI_VOICES.find((v) => v.id === 'Iapetus') || GEMINI_VOICES[0]
   );
-  const [selectedLanguage, setSelectedLanguage] = useState<LanguageOption>(LANGUAGES[0]); // English
+  const [selectedLanguage, setSelectedLanguage] = useState<LanguageOption>(
+    LANGUAGES.find((l) => l.code === 'en-in') || LANGUAGES[0]
+  );
   const [selectedEmotion, setSelectedEmotion] = useState<EmotionOption>(
-    EMOTIONS.find((e) => e.id === 'mysterious') || EMOTIONS[1]
+    EMOTIONS.find((e) => e.id === 'friendly') || EMOTIONS[0]
   );
-  const [pace, setPace] = useState<number>(1.0); // 100%
+  const [pace, setPace] = useState<number>(0.98); // 98%
   const [pitch, setPitch] = useState<PitchLevel>('Default');
   const [isAuditionModalOpen, setIsAuditionModalOpen] = useState(false);
   const [isApiKeyModalOpen, setIsApiKeyModalOpen] = useState(false);
@@ -155,9 +161,6 @@ export default function App() {
   // Language switch handler
   const handleLanguageChange = (lang: LanguageOption) => {
     setSelectedLanguage(lang);
-    if (lang.sampleScripts.length > 0) {
-      setScript(lang.sampleScripts[0].text);
-    }
     // Auto-select #1 recommended voice if current voice is not recommended for this language
     if (lang.recommendedVoices && lang.recommendedVoices.length > 0) {
       if (!lang.recommendedVoices.includes(selectedVoice.id)) {
@@ -207,71 +210,87 @@ export default function App() {
     setErrorMessage(null);
 
     try {
-      const sanitizedScript = cleanScriptDirections(script);
-
-      const headers: Record<string, string> = {
-        'Content-Type': 'application/json',
-      };
-      if (customApiKey) {
-        headers['x-gemini-api-key'] = customApiKey;
+      const sections = parseScriptSections(script);
+      if (sections.length === 0) {
+        throw new Error('Please enter or paste a script to generate voice-over.');
       }
 
-      const response = await fetch('/api/generate-voice', {
-        method: 'POST',
-        headers,
-        body: JSON.stringify({
+      const newTakes: GeneratedVoiceRecord[] = [];
+
+      for (const section of sections) {
+        const sanitizedScript = cleanScriptDirections(section.content);
+        if (!sanitizedScript) continue;
+
+        const headers: Record<string, string> = {
+          'Content-Type': 'application/json',
+        };
+        if (customApiKey) {
+          headers['x-gemini-api-key'] = customApiKey;
+        }
+
+        const response = await fetch('/api/generate-voice', {
+          method: 'POST',
+          headers,
+          body: JSON.stringify({
+            script: sanitizedScript,
+            voice: selectedVoice.id,
+            language: selectedLanguage.code,
+            emotion: selectedEmotion.name,
+            pace,
+            pitch,
+          }),
+        });
+
+        const data = await response.json();
+
+        if (!response.ok || !data.success || !data.audioBase64) {
+          if (response.status === 429 || data.error?.includes('cooling down') || data.retryAfterSec) {
+            const waitTime = data.retryAfterSec || 25;
+            setCooldownSeconds(waitTime);
+            return;
+          }
+          throw new Error(data.error || 'Voice synthesis failed. Please try again.');
+        }
+
+        // Successful audio generation for this section
+        setCooldownSeconds(0);
+        const wavArrayBuffer = base64ToWavArrayBuffer(data.audioBase64, data.mimeType);
+        const processed = await processAudio(wavArrayBuffer, pace, pitch);
+        const audioUrl = URL.createObjectURL(processed.wavBlob);
+        const safeVoice = selectedVoice.id.toLowerCase();
+        const safeEmotion = selectedEmotion.id.replace(/[^a-z0-9]/gi, '_').toLowerCase();
+        const safeLang = selectedLanguage.code;
+        const safeTitle = section.title.replace(/[^a-z0-9]/gi, '_').toLowerCase();
+        const fileName = `vox_${safeVoice}_${safeTitle}_${safeLang}_${Math.round(pace * 100)}pct.wav`;
+
+        const createdRecord: GeneratedVoiceRecord = {
+          id: `take_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+          timestamp: Date.now(),
           script: sanitizedScript,
           voice: selectedVoice.id,
-          language: selectedLanguage.code,
+          language: selectedLanguage.name,
           emotion: selectedEmotion.name,
           pace,
           pitch,
-        }),
-      });
+          audioUrl,
+          wavBlob: processed.wavBlob,
+          mp3Blob: processed.mp3Blob,
+          durationSec: Number(processed.durationSec.toFixed(1)),
+          sampleRate: data.sampleRate || 24000,
+          fileSizeBytes: processed.wavBlob.size,
+          fileName,
+          source: 'gemini',
+          title: section.title,
+        };
 
-      const data = await response.json();
-
-      if (!response.ok || !data.success || !data.audioBase64) {
-        if (response.status === 429 || data.error?.includes('cooling down') || data.retryAfterSec) {
-          const waitTime = data.retryAfterSec || 25;
-          setCooldownSeconds(waitTime);
-          return;
-        }
-        throw new Error(data.error || 'Voice synthesis failed. Please try again.');
+        newTakes.push(createdRecord);
       }
 
-      // Successful audio generation
-      setCooldownSeconds(0);
-      const wavArrayBuffer = base64ToWavArrayBuffer(data.audioBase64, data.mimeType);
-      const processed = await processAudio(wavArrayBuffer, pace, pitch);
-      const audioUrl = URL.createObjectURL(processed.wavBlob);
-      const safeVoice = selectedVoice.id.toLowerCase();
-      const safeEmotion = selectedEmotion.id.replace(/[^a-z0-9]/gi, '_').toLowerCase();
-      const safeLang = selectedLanguage.code;
-      const fileName = `vox_${safeVoice}_${safeEmotion}_${safeLang}_${Math.round(pace * 100)}pct.wav`;
-
-      const createdRecord: GeneratedVoiceRecord = {
-        id: `take_${Date.now()}`,
-        timestamp: Date.now(),
-        script: sanitizedScript,
-        voice: selectedVoice.id,
-        language: selectedLanguage.name,
-        emotion: selectedEmotion.name,
-        pace,
-        pitch,
-        audioUrl,
-        wavBlob: processed.wavBlob,
-        mp3Blob: processed.mp3Blob,
-        durationSec: Number(processed.durationSec.toFixed(1)),
-        sampleRate: data.sampleRate || 24000,
-        fileSizeBytes: processed.wavBlob.size,
-        fileName,
-        source: 'gemini',
-      };
-
-      setCurrentTake(createdRecord);
-      setPlayTrigger(Date.now());
-      setHistory((prev) => [createdRecord, ...prev.slice(0, 9)]);
+      if (newTakes.length > 0) {
+        setCurrentTake(newTakes[0]);
+        setPlayTrigger(Date.now());
+        setHistory((prev) => [...newTakes, ...prev].slice(0, 20));
+      }
     } catch (err: unknown) {
       console.error('Generation error:', err);
       setErrorMessage(err instanceof Error ? err.message : 'An error occurred during voice generation.');
@@ -346,8 +365,8 @@ export default function App() {
     <div className="min-h-screen bg-[var(--bg)] text-[var(--ink)] flex flex-col selection:bg-indigo-600 selection:text-white">
       {/* Variation 2 Studio Header */}
       <header className="px-5 sm:px-8 py-4 border-b-2 border-[var(--ink-faint)] flex flex-wrap items-center justify-between gap-4 bg-gradient-to-r from-[#0e1015] to-[#0b0c0f]">
-        <div className="brand-h">
-          G-ORA-VODS <span className="badge">AI STUDIO</span>
+        <div className="brand-h font-syne tracking-tight text-white">
+          GOWTHAMORA<span className="text-indigo-400 font-bold">-</span>VODS <span className="badge">AI STUDIO</span>
         </div>
 
         <div className="flex items-center gap-2.5 flex-wrap">
@@ -385,7 +404,7 @@ export default function App() {
       </header>
 
       {/* Main Studio Body - Two-Pane Studio Architecture */}
-      <main className="grid grid-cols-1 lg:grid-cols-[1fr_420px] flex-1 border-b-2 border-[var(--ink-faint)] overflow-hidden">
+      <main className="grid grid-cols-1 lg:grid-cols-[60%_40%] flex-1 border-b-2 border-[var(--ink-faint)] overflow-hidden">
         {/* Left Pane: Script Editor & Production Output */}
         <section className="editor-pane p-5 sm:p-8 lg:border-r-2 lg:border-[var(--ink-faint)] overflow-y-auto space-y-6">
           {/* Active Automated Quota Cooldown Banner */}
@@ -446,8 +465,15 @@ export default function App() {
             </div>
           )}
 
-          {/* 1. Script Editor Card */}
-          <div className="card">
+          {/* 1. Script Studio & Editor Card */}
+          <div className="card space-y-3 p-4 bg-[#0d0f15]/80 border border-white/10 rounded-lg shadow-sm">
+            <div className="flex items-center gap-2 border-b border-white/10 pb-2">
+              <FileText className="h-4 w-4 text-indigo-400" />
+              <div>
+                <h3 className="text-xs font-semibold uppercase tracking-wider text-white">Script Studio & Editor</h3>
+                <p className="text-[11px] text-[var(--ink-muted)]">Compose voice-over script, clean directions, & insert pauses</p>
+              </div>
+            </div>
             <ScriptEditor
               script={script}
               pace={pace}
@@ -457,15 +483,42 @@ export default function App() {
             />
           </div>
 
-          {/* 2. Output Audio Player Card */}
-          <div>
-            <div className="label justify-between mb-2">
-              <span className="flex items-center gap-1.5">
-                <Sparkles className="h-3.5 w-3.5 text-indigo-400" />
-                Audio Preview & Download
-              </span>
+          {/* 2. Script Templates & Code-Switching Card */}
+          <div className="card space-y-3 p-4 bg-[#0d0f15]/80 border border-white/10 rounded-lg shadow-sm">
+            <div className="flex items-center gap-2 border-b border-white/10 pb-2">
+              <Sparkles className="h-4 w-4 text-amber-400" />
+              <div>
+                <h3 className="text-xs font-semibold uppercase tracking-wider text-white">Script Templates & Code-Switching Samples</h3>
+                <p className="text-[11px] text-[var(--ink-muted)]">Quick-start samples tailored for {selectedLanguage.name}</p>
+              </div>
+            </div>
+            <div className="flex flex-wrap gap-1.5 pt-1">
+              {selectedLanguage.sampleScripts.map((sample) => (
+                <button
+                  key={sample.title}
+                  type="button"
+                  onClick={() => setScript(sample.text)}
+                  className="btn btn-secondary text-[0.68rem] py-1.5 px-3 flex items-center gap-1.5"
+                >
+                  <Sparkles className="h-3 w-3 text-indigo-400" />
+                  <span>{sample.title}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* 3. Audio Preview & Export Card */}
+          <div className="card space-y-3 p-4 bg-[#0d0f15]/80 border border-white/10 rounded-lg shadow-sm">
+            <div className="flex items-center justify-between border-b border-white/10 pb-2">
+              <div className="flex items-center gap-2">
+                <Volume2 className="h-4 w-4 text-emerald-400" />
+                <div>
+                  <h3 className="text-xs font-semibold uppercase tracking-wider text-white">Audio Preview & Export</h3>
+                  <p className="text-[11px] text-[var(--ink-muted)]">Play generated take or export in WAV & MP3 format</p>
+                </div>
+              </div>
               {currentTake && (
-                <span className="font-mono-code text-[0.62rem] text-[var(--ink-muted)]">
+                <span className="font-mono-code text-[0.65rem] bg-emerald-500/20 text-emerald-300 px-2 py-0.5 rounded">
                   {currentTake.durationSec}s duration
                 </span>
               )}
@@ -479,13 +532,16 @@ export default function App() {
             />
           </div>
 
-          {/* 3. Takes History Card (if any) */}
+          {/* 4. Production History Card (if any) */}
           {history.length > 0 && (
-            <div className="card">
-              <div className="flex items-center justify-between mb-3 border-b border-[var(--ink-faint)] pb-2">
-                <div className="label mb-0">
-                  <History className="h-3.5 w-3.5 text-indigo-400" />
-                  <span>Recent Takes ({history.length})</span>
+            <div className="card space-y-3 p-4 bg-[#0d0f15]/80 border border-white/10 rounded-lg shadow-sm">
+              <div className="flex items-center justify-between border-b border-white/10 pb-2">
+                <div className="flex items-center gap-2">
+                  <History className="h-4 w-4 text-indigo-400" />
+                  <div>
+                    <h3 className="text-xs font-semibold uppercase tracking-wider text-white">Production History & Takes</h3>
+                    <p className="text-[11px] text-[var(--ink-muted)]">Recently generated voice takes ({history.length})</p>
+                  </div>
                 </div>
                 <button
                   type="button"
@@ -513,8 +569,13 @@ export default function App() {
                         onClick={() => handlePlayTake(take)}
                       >
                         <div className="flex items-center gap-2">
-                          <span className="font-semibold text-xs text-white">{take.voice}</span>
-                          <span className="font-mono-code text-[0.6rem] px-1.5 py-0.2 rounded-[2px] bg-indigo-500/20 text-indigo-300">
+                          <span className="font-semibold text-xs text-white">{take.title || take.voice}</span>
+                          {take.title && (
+                            <span className="font-mono-code text-[0.6rem] px-1.5 py-0.2 rounded-[2px] bg-indigo-500/20 text-indigo-300">
+                              {take.voice}
+                            </span>
+                          )}
+                          <span className="font-mono-code text-[0.6rem] px-1.5 py-0.2 rounded-[2px] bg-slate-800 text-slate-300">
                             {take.emotion}
                           </span>
                           <span className="font-mono-code text-[0.6rem] text-[var(--ink-muted)]">
@@ -568,27 +629,59 @@ export default function App() {
         </section>
 
         {/* Right Pane: Voice Parameters & Synthesis */}
-        <section className="config-pane p-5 sm:p-8 bg-white/[0.015] overflow-y-auto space-y-5">
-          {/* Studio Presets Bar */}
-          <PresetManager
-            currentVoice={selectedVoice}
-            currentEmotion={selectedEmotion}
-            pace={pace}
-            pitch={pitch}
-            currentLanguage={selectedLanguage}
-            onApplyPreset={handleApplyPreset}
-          />
+        <section className="config-pane p-5 sm:p-8 bg-white/[0.015] overflow-y-auto space-y-6">
+          {/* 1. Studio Presets Card */}
+          <div className="card space-y-3 p-4 bg-[#0d0f15]/80 border border-white/10 rounded-lg shadow-sm">
+            <div className="flex items-center justify-between border-b border-white/10 pb-2">
+              <div className="flex items-center gap-2">
+                <SlidersHorizontal className="h-4 w-4 text-indigo-400" />
+                <div>
+                  <h3 className="text-xs font-semibold uppercase tracking-wider text-white">Studio Presets</h3>
+                  <p className="text-[11px] text-[var(--ink-muted)]">Quick configurations & presets</p>
+                </div>
+              </div>
+              <span className="font-mono-code text-[0.62rem] text-[var(--ink-muted)]">Quick Config</span>
+            </div>
+            <PresetManager
+              currentVoice={selectedVoice}
+              currentEmotion={selectedEmotion}
+              pace={pace}
+              pitch={pitch}
+              currentLanguage={selectedLanguage}
+              onApplyPreset={handleApplyPreset}
+            />
+          </div>
 
-          {/* Language Selection (placed first so recommended voices adapt) */}
-          <div className="control-row">
+          {/* 2. Language & Accent Card */}
+          <div className="card space-y-3 p-4 bg-[#0d0f15]/80 border border-white/10 rounded-lg shadow-sm">
+            <div className="flex items-center justify-between border-b border-white/10 pb-2">
+              <div className="flex items-center gap-2">
+                <Globe2 className="h-4 w-4 text-indigo-400" />
+                <div>
+                  <h3 className="text-xs font-semibold uppercase tracking-wider text-white">Language & Accent</h3>
+                  <p className="text-[11px] text-[var(--ink-muted)]">Language-switching & Indian accents</p>
+                </div>
+              </div>
+              <span className="font-mono-code text-[0.62rem] text-indigo-300">Language-Switching</span>
+            </div>
             <LanguageSelector
               selectedLanguage={selectedLanguage.code}
               onChange={handleLanguageChange}
             />
           </div>
 
-          {/* Voice Persona Selection (clean and never overlapping) */}
-          <div className="control-row">
+          {/* 3. Voice Persona Card */}
+          <div className="card space-y-3 p-4 bg-[#0d0f15]/80 border border-white/10 rounded-lg shadow-sm">
+            <div className="flex items-center justify-between border-b border-white/10 pb-2">
+              <div className="flex items-center gap-2">
+                <Mic2 className="h-4 w-4 text-indigo-400" />
+                <div>
+                  <h3 className="text-xs font-semibold uppercase tracking-wider text-white">Voice Persona</h3>
+                  <p className="text-[11px] text-[var(--ink-muted)]">Gemini native voices & custom voices</p>
+                </div>
+              </div>
+              <span className="font-mono-code text-[0.62rem] text-amber-300">Native Voices</span>
+            </div>
             <VoiceSelector
               selectedVoice={selectedVoice.id}
               onChange={(v) => setSelectedVoice(v)}
@@ -602,8 +695,18 @@ export default function App() {
             />
           </div>
 
-          {/* Emotion & Style Delivery */}
-          <div className="control-row">
+          {/* 4. Emotion & Delivery Style Card */}
+          <div className="card space-y-3 p-4 bg-[#0d0f15]/80 border border-white/10 rounded-lg shadow-sm">
+            <div className="flex items-center justify-between border-b border-white/10 pb-2">
+              <div className="flex items-center gap-2">
+                <Sparkles className="h-4 w-4 text-indigo-400" />
+                <div>
+                  <h3 className="text-xs font-semibold uppercase tracking-wider text-white">Emotion & Delivery Style</h3>
+                  <p className="text-[11px] text-[var(--ink-muted)]">Tone conditioning & emotion presets</p>
+                </div>
+              </div>
+              <span className="font-mono-code text-[0.62rem] text-[var(--ink-muted)]">Tone Conditioning</span>
+            </div>
             <EmotionSelector
               selectedEmotion={selectedEmotion.name}
               onChange={handleEmotionChange}
@@ -612,8 +715,18 @@ export default function App() {
             />
           </div>
 
-          {/* Pace & Pitch Controls */}
-          <div className="control-row">
+          {/* 5. Speaking Pace Card */}
+          <div className="card space-y-3 p-4 bg-[#0d0f15]/80 border border-white/10 rounded-lg shadow-sm">
+            <div className="flex items-center justify-between border-b border-white/10 pb-2">
+              <div className="flex items-center gap-2">
+                <Gauge className="h-4 w-4 text-indigo-400" />
+                <div>
+                  <h3 className="text-xs font-semibold uppercase tracking-wider text-white">Speaking Pace</h3>
+                  <p className="text-[11px] text-[var(--ink-muted)]">Adjustable speed pacing</p>
+                </div>
+              </div>
+              <span className="font-mono-code text-[0.62rem] text-indigo-400 font-bold">{Math.round(pace * 100)}% Speed</span>
+            </div>
             <PaceAndPitchControls
               pace={pace}
               pitch={pitch}
@@ -702,7 +815,7 @@ export default function App() {
 
       {/* Variation 2 Footer */}
       <footer className="px-6 py-3 border-t border-[var(--ink-faint)] font-mono-code text-[0.65rem] text-[var(--ink-muted)] flex flex-wrap items-center justify-between gap-2 bg-[#090a0d]">
-        <div>VOXSTUDIO • GEMINI TTS 24KHZ ENGINE • MP3 & WAV</div>
+        <div>GOWTHAMORA-VODS • GEMINI TTS 24KHZ ENGINE • MP3 & WAV</div>
         <div>GLOBAL & INDIAN HYBRID LANGUAGES • KANGLISH · HINGLISH · TANGLISH · TENGLISH · MANGLISH</div>
       </footer>
 

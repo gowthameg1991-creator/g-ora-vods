@@ -234,6 +234,25 @@ export const VoiceSelector: React.FC<VoiceSelectorProps> = ({
           </div>
 
           <div className="flex items-center gap-1.5 shrink-0 ml-1">
+            <button
+              type="button"
+              onClick={(e) => handlePlaySample(current, e)}
+              disabled={loadingVoiceId === current.id}
+              className={`btn btn-secondary py-1 px-2 text-[0.65rem] rounded-[2px] flex items-center gap-1 ${
+                playingVoiceId === current.id ? 'active' : ''
+              }`}
+              title={`Play sample of ${current.name}`}
+            >
+              {loadingVoiceId === current.id ? (
+                <Loader2 className="h-3 w-3 animate-spin" />
+              ) : playingVoiceId === current.id ? (
+                <Pause className="h-3 w-3 fill-current" />
+              ) : (
+                <Play className="h-3 w-3 fill-current" />
+              )}
+              <span className="hidden sm:inline">Sample</span>
+            </button>
+
             {onToggleFavorite && (
               <button
                 type="button"
@@ -257,41 +276,6 @@ export const VoiceSelector: React.FC<VoiceSelectorProps> = ({
               }`}
             />
           </div>
-        </div>
-
-        {/* Audition Sample Sub-bar */}
-        <div className="border-t border-[var(--ink-faint)] bg-black/20 px-3 py-2 flex items-center justify-between gap-2">
-          <span className="font-mono-code text-[0.65rem] text-indigo-300 flex items-center gap-1.5 truncate">
-            <Volume2 className="h-3 w-3 text-indigo-400 shrink-0" />
-            Audition: {currentEmotion?.name || 'Natural'} · {Math.round(pace * 100)}%
-          </span>
-
-          <button
-            type="button"
-            onClick={(e) => handlePlaySample(current, e)}
-            disabled={loadingVoiceId === current.id}
-            className={`btn btn-secondary py-1 px-2.5 text-[0.65rem] ${
-              playingVoiceId === current.id ? 'active' : ''
-            }`}
-            title={`Hear sample of ${current.name} with ${currentEmotion?.name || 'Natural'} emotion at ${Math.round(pace * 100)}% pace`}
-          >
-            {loadingVoiceId === current.id ? (
-              <>
-                <Loader2 className="h-3 w-3 animate-spin" />
-                <span>Calibrating...</span>
-              </>
-            ) : playingVoiceId === current.id ? (
-              <>
-                <Pause className="h-3 w-3 fill-current" />
-                <span>Pause</span>
-              </>
-            ) : (
-              <>
-                <Play className="h-3 w-3 fill-current ml-0.5" />
-                <span>Play Sample</span>
-              </>
-            )}
-          </button>
         </div>
 
         {/* Smooth Expandable Voice List - Never overlaps below because it expands inline! */}

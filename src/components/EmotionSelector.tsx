@@ -28,6 +28,7 @@ export const EmotionSelector: React.FC<EmotionSelectorProps> = ({
   const categories = [
     '⭐ Favorites',
     'All',
+    'General',
     'Mystery & Suspense',
     'High Energy',
     'Calm & Warm',
@@ -52,23 +53,13 @@ export const EmotionSelector: React.FC<EmotionSelectorProps> = ({
   });
 
   return (
-    <div className="relative">
-      <div className="label justify-between mb-1.5">
-        <span className="flex items-center gap-1.5">
-          <Sparkles className="h-3.5 w-3.5 text-indigo-400" />
-          Emotion & Style Delivery
-        </span>
-        <span className="font-mono-code text-[0.62rem] text-[var(--ink-muted)]">
-          {EMOTIONS.length} Styles
-        </span>
-      </div>
-
-      {/* Main Selector Button */}
-      <div className="rounded-[4px] border border-[var(--ink-faint)] bg-[#0d0f14] hover:border-[rgba(226,232,240,0.25)] transition flex items-stretch overflow-hidden">
-        <button
-          type="button"
+    <div className="space-y-2">
+      {/* Main Selected Emotion Card */}
+      <div className="border border-[var(--ink-faint)] bg-[#0d0f14] rounded-[4px] transition hover:border-[rgba(226,232,240,0.25)]">
+        {/* Top Clickable Trigger Row */}
+        <div
           onClick={() => setIsOpen(!isOpen)}
-          className="flex-1 text-left p-3 transition flex items-center justify-between gap-3 focus:outline-none"
+          className="p-3 cursor-pointer flex items-center justify-between gap-3 select-none"
         >
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2">
@@ -84,40 +75,38 @@ export const EmotionSelector: React.FC<EmotionSelectorProps> = ({
             </div>
             <p className="text-xs text-[var(--ink-muted)] truncate mt-0.5">{currentEmotion.bestUse}</p>
           </div>
-          <ChevronDown
-            className={`h-4 w-4 text-[var(--ink-muted)] transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`}
-          />
-        </button>
 
-        {/* Quick Star Favorite Toggle on Main Card */}
-        {onToggleFavorite && (
-          <button
-            type="button"
-            onClick={(e) => {
-              e.stopPropagation();
-              onToggleFavorite(currentEmotion.id);
-            }}
-            className={`px-3 border-l border-[var(--ink-faint)] transition flex items-center justify-center hover:bg-white/5 ${
-              isCurrentFavorited
-                ? 'text-amber-400'
-                : 'text-slate-500 hover:text-amber-400'
-            }`}
-            title={isCurrentFavorited ? 'Remove from favorites' : 'Add to favorites'}
-          >
-            <Star
-              className={`h-4 w-4 ${isCurrentFavorited ? 'fill-amber-400' : ''}`}
+          <div className="flex items-center gap-1.5 shrink-0 ml-1">
+            {onToggleFavorite && (
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onToggleFavorite(currentEmotion.id);
+                }}
+                className={`p-1.5 rounded-[2px] transition hover:bg-white/5 ${
+                  isCurrentFavorited
+                    ? 'text-amber-400'
+                    : 'text-slate-500 hover:text-amber-400'
+                }`}
+                title={isCurrentFavorited ? 'Remove from favorites' : 'Add to favorite emotions'}
+              >
+                <Star className={`h-3.5 w-3.5 ${isCurrentFavorited ? 'fill-amber-400' : ''}`} />
+              </button>
+            )}
+            <ChevronDown
+              className={`h-4 w-4 text-[var(--ink-muted)] transition-transform duration-200 ${
+                isOpen ? 'rotate-180' : ''
+              }`}
             />
-          </button>
-        )}
-      </div>
+          </div>
+        </div>
 
-      {/* Dropdown Menu */}
-      {isOpen && (
-        <>
-          <div className="fixed inset-0 z-40" onClick={() => setIsOpen(false)} />
-          <div className="absolute left-0 right-0 top-full mt-2 z-50 rounded-[4px] border border-[var(--ink-faint)] bg-[#0d0f15] shadow-2xl p-2.5 max-h-[400px] flex flex-col backdrop-blur-xl">
+        {/* Smooth Expandable Emotion List - Expands inline */}
+        {isOpen && (
+          <div className="border-t border-[var(--ink-faint)] bg-[#0b0c10] p-2.5 space-y-2 animate-in fade-in duration-150">
             {/* Search Input */}
-            <div className="relative mb-2">
+            <div className="relative">
               <Search className="absolute left-3 top-2.5 h-3.5 w-3.5 text-[var(--ink-muted)]" />
               <input
                 type="text"
@@ -130,7 +119,7 @@ export const EmotionSelector: React.FC<EmotionSelectorProps> = ({
             </div>
 
             {/* Category Filter Buttons */}
-            <div className="flex gap-1 overflow-x-auto pb-2 scrollbar-none border-b border-[var(--ink-faint)] mb-2">
+            <div className="flex flex-wrap gap-1 pb-2 border-b border-[var(--ink-faint)] mb-2">
               {categories.map((cat) => {
                 const isFavTab = cat === '⭐ Favorites';
                 const count = isFavTab ? favoriteEmotions.length : undefined;
@@ -160,9 +149,9 @@ export const EmotionSelector: React.FC<EmotionSelectorProps> = ({
             </div>
 
             {/* Options List */}
-            <div className="overflow-y-auto space-y-1 flex-1 pr-1">
+            <div className="max-h-[300px] overflow-y-auto space-y-1 pr-1">
               {filteredEmotions.length === 0 ? (
-                <div className="p-5 text-center text-xs text-[var(--ink-muted)]">
+                <div className="p-4 text-center text-xs text-[var(--ink-muted)]">
                   {activeCategory === '⭐ Favorites' ? (
                     <div className="space-y-1">
                       <Star className="h-5 w-5 text-amber-400/50 mx-auto mb-1" />
@@ -239,8 +228,8 @@ export const EmotionSelector: React.FC<EmotionSelectorProps> = ({
               )}
             </div>
           </div>
-        </>
-      )}
+        )}
+      </div>
     </div>
   );
 };

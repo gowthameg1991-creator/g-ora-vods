@@ -58,8 +58,7 @@ export const PresetManager: React.FC<PresetManagerProps> = ({
       const saved = localStorage.getItem(STORAGE_KEY);
       if (saved) {
         const parsed = JSON.parse(saved);
-        const userCustom = Array.isArray(parsed) ? parsed.filter((p) => !p.isSystem) : [];
-        return [...DEFAULT_PRESETS, ...userCustom];
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
       }
     } catch (e) {
       console.warn('Failed to load presets from localStorage', e);
@@ -105,11 +104,10 @@ export const PresetManager: React.FC<PresetManagerProps> = ({
     };
   }, [isDropdownOpen]);
 
-  // Sync custom presets to localStorage
-  const saveCustomPresetsToStorage = (updatedList: StudioPreset[]) => {
+  // Sync presets to localStorage
+  const savePresetsToStorage = (updatedList: StudioPreset[]) => {
     try {
-      const customOnly = updatedList.filter((p) => !p.isSystem);
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(customOnly));
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(updatedList));
     } catch (e) {
       console.warn('Failed to save presets to localStorage', e);
     }
@@ -173,7 +171,7 @@ export const PresetManager: React.FC<PresetManagerProps> = ({
 
     const updated = [...presets, newPreset];
     setPresets(updated);
-    saveCustomPresetsToStorage(updated);
+    savePresetsToStorage(updated);
 
     // Auto-pin newly created custom preset to screen
     const updatedPinned = [...pinnedIds, newPresetId];
@@ -189,7 +187,7 @@ export const PresetManager: React.FC<PresetManagerProps> = ({
     e.stopPropagation();
     const updated = presets.filter((p) => p.id !== id);
     setPresets(updated);
-    saveCustomPresetsToStorage(updated);
+    savePresetsToStorage(updated);
 
     const updatedPinned = pinnedIds.filter((pid) => pid !== id);
     setPinnedIds(updatedPinned);
@@ -416,16 +414,14 @@ export const PresetManager: React.FC<PresetManagerProps> = ({
                           <Pin className={`h-3.5 w-3.5 ${isPinned ? 'fill-current' : ''}`} />
                         </button>
 
-                        {!preset.isSystem && (
-                          <button
-                            type="button"
-                            onClick={(e) => handleDeletePreset(preset.id, e)}
-                            title="Delete custom preset"
-                            className="p-1.5 rounded text-slate-500 hover:text-rose-400 hover:bg-rose-950/20 transition"
-                          >
-                            <Trash2 className="h-3 w-3" />
-                          </button>
-                        )}
+                        <button
+                          type="button"
+                          onClick={(e) => handleDeletePreset(preset.id, e)}
+                          title="Delete preset"
+                          className="p-1.5 rounded text-slate-500 hover:text-rose-400 hover:bg-rose-950/20 transition"
+                        >
+                          <Trash2 className="h-3 w-3" />
+                        </button>
                       </div>
                     </div>
                   );

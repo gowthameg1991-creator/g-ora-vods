@@ -230,13 +230,54 @@ export async function processAudio(
  */
 export function cleanScriptDirections(text: string): string {
   return text
-    .replace(/\[(?!\s*pause\b)[^\]]*\]/gi, ' ')
-    .replace(/\((?!\s*pause\b)[a-zA-Z\s]{2,20}\)/gi, ' ')
+    .replace(/\[(?!\s*pause\b)[^\]]*\]/gi, '')
+    .replace(/\((?!\s*pause\b)[a-zA-Z\s]{2,20}\)/gi, '')
     .replace(/^(voiceover|narrator|host|speaker\s*\d*|ai|vo):\s*/gim, '')
     .replace(/\*+/g, '')
     .replace(/[ \t]{2,}/g, ' ')
     .replace(/\n{3,}/g, '\n\n')
     .trim();
+}
+
+export interface ScriptSection {
+  title: string;
+  content: string;
+}
+
+/**
+ * Parses a script into multiple separate voice-over sections when '#' or '##' headers are present.
+ * The line with # or ## becomes the section title and is excluded from the voice-over text.
+ */
+export function parseScriptSections(text: string): ScriptSection[] {
+  const lines = text.split(/\r?\n/);
+  const sections: ScriptSection[] = [];
+  let currentTitle = 'Voice Over 1';
+  let currentLines: string[] = [];
+
+  for (const line of lines) {
+    const trimmedLine = line.trim();
+    if (trimmedLine.startsWith('#')) {
+      if (currentLines.length > 0) {
+        sections.push({
+          title: currentTitle,
+          content: currentLines.join('\n').trim(),
+        });
+        currentLines = [];
+      }
+      currentTitle = trimmedLine.replace(/^#+\s*/, '') || 'Voice Over';
+    } else {
+      currentLines.push(line);
+    }
+  }
+
+  if (currentLines.length > 0 || sections.length === 0) {
+    sections.push({
+      title: currentTitle,
+      content: currentLines.join('\n').trim(),
+    });
+  }
+
+  return sections.filter((s) => s.content.length > 0);
 }
 
 export interface ScriptSegmentToken {
@@ -430,12 +471,8 @@ export function playScriptAloud(
   const pitchConfig = PITCH_CONFIGS.find((p) => p.id === pitch) || PITCH_CONFIGS[0];
   const semitoneShift = (pitchConfig.semitones || 0) * 0.08;
 
-  // Calculate final pitch (0.5 to 2.0)
+  // Calculate final pitch (0.5 to 2.0) - uniformly anchored across all regional languages
   let computedPitch = persona.basePitch + emotionSetting.pitchShift + semitoneShift;
-  if (persona.gender === 'male' && (langCode === 'kn' || langCode === 'Kannada')) {
-    // If speaking Kannada/Kanglish with a male persona, calibrate pitch to an authentic male baritone register (0.68 - 0.76)
-    computedPitch = Math.min(0.76, computedPitch * 0.65);
-  }
   const finalPitch = Math.max(0.5, Math.min(2.0, computedPitch));
 
   // Calculate final rate (0.5 to 2.0)
@@ -444,57 +481,39 @@ export function playScriptAloud(
     Math.min(2.0, pace * persona.speedMultiplier * (1 + emotionSetting.speedShift))
   );
 
-  // Select appropriate browser voice matching gender & language
+  // Select appropriate browser voice matching gender consistently across all regional languages
   const voices = window.speechSynthesis.getVoices();
-  const isKn = langCode === 'kn' || langCode === 'Kannada';
+  const englishVoices = voices.filter((v) => v.lang.toLowerCase().startsWith('en') || v.lang.toLowerCase().includes('in'));
 
   let selectedVoice: SpeechSynthesisVoice | undefined;
 
-  if (isKn) {
-    if (persona.gender === 'male') {
-      // Find male Indian voice if available
-      selectedVoice =
-        voices.find((v) => {
-          const n = v.name.toLowerCase();
-          const l = v.lang.toLowerCase();
-          return (
-            (l.includes('kn') || l.includes('in')) &&
-            (n.includes('male') || n.includes('david') || n.includes('ravi') || n.includes('prabhat') || n.includes('guy') || !n.includes('female'))
-          );
-        }) || voices.find((v) => v.lang.toLowerCase().includes('kn'));
-    } else {
-      selectedVoice = voices.find((v) => v.lang.toLowerCase().includes('kn'));
-    }
+  if (persona.gender === 'female') {
+    selectedVoice = englishVoices.find((v) => {
+      const n = v.name.toLowerCase();
+      return (
+        n.includes('natural') ||
+        n.includes('google us') ||
+        n.includes('samantha') ||
+        n.includes('zira') ||
+        n.includes('jenny') ||
+        n.includes('female')
+      );
+    });
   } else {
-    const englishVoices = voices.filter((v) => v.lang.toLowerCase().startsWith('en'));
-    if (persona.gender === 'female') {
-      selectedVoice = englishVoices.find((v) => {
-        const n = v.name.toLowerCase();
-        return (
-          n.includes('natural') ||
-          n.includes('google us') ||
-          n.includes('samantha') ||
-          n.includes('zira') ||
-          n.includes('jenny') ||
-          n.includes('female')
-        );
-      });
-    } else {
-      selectedVoice = englishVoices.find((v) => {
-        const n = v.name.toLowerCase();
-        return (
-          n.includes('natural') ||
-          n.includes('google us') ||
-          n.includes('david') ||
-          n.includes('daniel') ||
-          n.includes('guy') ||
-          n.includes('male')
-        );
-      });
-    }
-    if (!selectedVoice && englishVoices.length > 0) {
-      selectedVoice = englishVoices[0];
-    }
+    selectedVoice = englishVoices.find((v) => {
+      const n = v.name.toLowerCase();
+      return (
+        n.includes('natural') ||
+        n.includes('google us') ||
+        n.includes('david') ||
+        n.includes('daniel') ||
+        n.includes('guy') ||
+        n.includes('male')
+      );
+    });
+  }
+  if (!selectedVoice && englishVoices.length > 0) {
+    selectedVoice = englishVoices[0];
   }
 
   let isStopped = false;
@@ -534,7 +553,7 @@ export function playScriptAloud(
         utterance.rate = finalRate;
         utterance.pitch = finalPitch;
         utterance.volume = emotionSetting.volume;
-        utterance.lang = isKn ? 'kn-IN' : 'en-US';
+        utterance.lang = 'en-US';
         if (selectedVoice) {
           utterance.voice = selectedVoice;
         }

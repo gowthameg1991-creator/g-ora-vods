@@ -491,22 +491,22 @@ export const LANGUAGES: LanguageOption[] = [
       {
         title: '🔥 ಕಂಗ್ಲಿಷ್ ಸ್ಮಾರ್ಟ್‌ಫೋನ್ ರೀಲ್ (Kanglish Tech Hook)',
         description: 'ಮಿಶ್ರ ಕನ್ನಡ ಮತ್ತು ಇಂಗ್ಲಿಷ್ ವೈರಲ್ ರೀಲ್ ಹುಕ್ (Puck ಧ್ವನಿಗೆ ಸೂಕ್ತ)',
-        text: `Hey friends! ನೀವೇನಾದ್ರೂ ಹೊಸ smartphone buy ಮಾಡ್ಬೇಕು ಅಂತ plan ಮಾಡ್ತಿದೀರಾ?\n\n[PAUSE 1.5]\n\nWait! ಈ 3 important features ಚೆಕ್ ಮಾಡ್ದೆ purchase ಮಾಡ್ಬೇಡಿ.\n\nFirst, minimum 5000 mAh battery life ಇರ್ಬೇಕು. Second, 120Hz AMOLED display, and third, 5G processor support!\n\nEe video ಇಷ್ಟ ಆದ್ರೆ like ಮಾಡಿ, ನಿಮ್ಮ friends ಜೊತೆ share ಮಾಡಿ, follow ಮಾಡೋದು ಮರೀಬೇಡಿ!`,
+        text: `Hey friends! ನೀವೇನಾದ್ರೂ ಹೊಸ smartphone buy ಮಾಡ್ಬೇಕು ಅಂತ plan ಮಾಡ್ತಿದೀರಾ?\n[PAUSE 1.5]\nWait! ಈ 3 important features ಚೆಕ್ ಮಾಡ್ದೆ purchase ಮಾಡ್ಬೇಡಿ.\nFirst, minimum 5000 mAh battery life ಇರ್ಬೇಕು. Second, 120Hz AMOLED display, and third, 5G processor support!\nEe video ಇಷ್ಟ ಆದ್ರೆ like ಮಾಡಿ, ನಿಮ್ಮ friends ಜೊತೆ share ಮಾಡಿ, follow ಮಾಡೋದು ಮರೀಬೇಡಿ!`,
       },
       {
         title: '🚀 ಕಂಗ್ಲಿಷ್ ಯೂಟ್ಯೂಬ್ ಶಾರ್ಟ್ಸ್ (Kanglish AI Tools)',
         description: 'ಯೂಟ್ಯೂಬ್ ಶಾರ್ಟ್ಸ್‌ಗಾಗಿ ಕಂಗ್ಲಿಷ್ ಟೆಕ್ ವಿವರಣೆ (Iapetus ಧ್ವನಿಗೆ ಸೂಕ್ತ)',
-        text: `Namaskara friends! ಇವತ್ತಿನ video ದಲ್ಲಿ, YouTube Shorts create ಮಾಡೋಕೆ top 3 AI tools ಬಗ್ಗೆ ಹೇಳ್ತೀನಿ.\n\n[PAUSE 1.5]\n\nNumber one: G-ORA-VODS for realistic voice-overs. Script paste ಮಾಡಿ, instant studio audio download ಮಾಡ್ಕೊಳ್ಳಿ!\n\nEe reel save ಮಾಡ्ಕೊಳ್ಳಿ ಮತ್ತು ನಿಮ್ಮ content creator friends ಜೊತೆ share ಮಾಡಿ!`,
+        text: `Namaskara friends! ಇವತ್ತಿನ video ದಲ್ಲಿ, YouTube Shorts create ಮಾಡೋಕೆ top 3 AI tools ಬಗ್ಗೆ ಹೇಳ್ತೀನಿ.\n[PAUSE 1.5]\nNumber one: GOWTHAMORA-VODS for realistic voice-overs. Script paste ಮಾಡಿ, instant studio audio download ಮಾಡ್ಕೊಳ್ಳಿ!\nEe reel save ಮಾಡ್ಕೊಳ್ಳಿ ಮತ್ತು ನಿಮ್ಮ content creator friends ಜೊತೆ share ಮಾಡಿ!`,
       },
       {
         title: '💰 ಕಂಗ್ಲಿಷ್ ಮನಿ & ಫೈನಾನ್ಸ್ ಟಿಪ್ಸ್ (Kanglish Finance)',
         description: 'ಸೇವಿಂಗ್ಸ್ ಮತ್ತು ಇನ್ವೆಸ್ಟ್‌ಮೆಂಟ್ ಸಲಹೆಗಳು (Kore ಧ್ವನಿಗೆ ಸೂಕ್ತ)',
-        text: `Hello guys! ನಿಮ್ಮ monthly salary ಯಿಂದ ಹಣ save ಮಾಡೋಕೆ ಕಷ್ಟ ಆಗ್ತಿದ್ಯಾ?\n\n[PAUSE 1.5]\n\nSimple formula: 50-30-20 rule follow ಮಾಡಿ. 50% needs ಗೆ, 30% wants ಗೆ, and 20% compulsory investment ಗೆ ಇಡಿ.\n\nStart your SIP today! More finance tips ಗಾಗಿ ಈ page follow ಮಾಡಿ.`,
+        text: `Hello guys! ನಿಮ್ಮ monthly salary ಯಿಂದ ಹಣ save ಮಾಡೋಕೆ ಕಷ್ಟ ಆಗ್ತಿದ್ಯಾ?\n[PAUSE 1.5]\nSimple formula: 50-30-20 rule follow ಮಾಡಿ. 50% needs ಗೆ, 30% wants ಗೆ, and 20% compulsory investment ಗೆ ಇಡಿ.\nStart your SIP today! More finance tips ಗಾಗಿ ಈ page follow ಮಾಡಿ.`,
       },
       {
         title: '🎙️ ಕನ್ನಡ ರಹಸ್ಯ ಕಥೆ - ಚಾರೋನ್ ವಾಯ್ಸ್ (Deep Kannada Mystery)',
         description: 'ಆಳವಾದ ಗಂಭೀರ ನಿರೂಪಣೆ (Charon ಗಂಡು ಧ್ವನಿಗೆ ಸೂಕ್ತ)',
-        text: `ಕರ್ನಾಟಕದ ಇತಿಹಾಸದಲ್ಲಿ ಈ ಒಂದು ಕೋಟೆ ಇಂದಿಗೂ ರಹಸ್ಯವಾಗಿ ಉಳಿದಿದೆ...\n\n[PAUSE 2]\n\nಯಾರೂ ಪ್ರವೇಶಿಸದ ಆ ಕತ್ತಲೆಯ ಸುರಂಗದೊಳಗೆ ಏನು ಅಡಗಿದೆ? ಇಂದಿನ ಸಂಚಿಕೆಯಲ್ಲಿ ತಿಳಿಯೋಣ.`,
+        text: `ಕರ್ನಾಟಕದ ಇತಿಹಾಸದಲ್ಲಿ ಈ ಒಂದು ಕೋಟೆ ಇಂದಿಗೂ ರಹಸ್ಯವಾಗಿ ಉಳಿದಿದೆ...\n[PAUSE 2]\nಯಾರೂ ಪ್ರವೇಶಿಸದ ಆ ಕತ್ತಲೆಯ ಸುರಂಗದೊಳಗೆ ಏನು ಅಡಗಿದೆ? ಇಂದಿನ ಸಂಚಿಕೆಯಲ್ಲಿ ತಿಳಿಯೋಣ.`,
       },
     ],
   },
@@ -536,22 +536,22 @@ export const LANGUAGES: LanguageOption[] = [
       {
         title: '🔥 Hinglish Tech Hook (Viral Reel)',
         description: 'Fast-paced phone battery advice (Puck / Iapetus voice)',
-        text: `Bhai, agar tum bhi apna smartphone raat bhar charge pe chhod dete ho...\n\n[PAUSE 1.5]\n\nStop right now! Battery cycle damage hone se phone slow ho jata hai.\n\nYeh 2 simple settings abhi turn off karo aur battery life 40% increase karo. Follow for more tech hacks!`,
+        text: `Bhai, agar tum bhi apna smartphone raat bhar charge pe chhod dete ho...\n[PAUSE 1.5]\nStop right now! Battery cycle damage hone se phone slow ho jata hai.\nYeh 2 simple settings abhi turn off karo aur battery life 40% increase karo. Follow for more tech hacks!`,
       },
       {
         title: '🎙️ Hinglish Crime & Mystery (Charon Voice)',
         description: 'Deep suspenseful story hook (Charon deep baritone voice)',
-        text: `Saal 1998... Shimla ke ek sunsaan bungalow mein aadhi raat ko ek phone call aati hai...\n\n[PAUSE 2]\n\nInspector ne receiver uthaya, lekin dusri taraf sirf ek ajeeb sa saans lene ka sound tha.\n\nKya tha us bungalow ka raaz? Chaliye jaante hain.`,
+        text: `Saal 1998... Shimla ke ek sunsaan bungalow mein aadhi raat ko ek phone call aati hai...\n[PAUSE 2]\nInspector ne receiver uthaya, lekin dusri taraf sirf ek ajeeb sa saans lene ka sound tha.\nKya tha us bungalow ka raaz? Chaliye jaante hain.`,
       },
       {
         title: '💰 Hinglish Personal Finance & SIP (Kore Voice)',
         description: 'Clean financial literacy explainer for 20-somethings',
-        text: `Agar tumhari age 20 se 30 ke beech hai, toh yeh financial advice miss mat karna.\n\n[PAUSE 1.5]\n\nHar mahine salary ka 20% index funds mein invest karo. 10 saal baad compounding magic dekh kar hairan reh jaoge!`,
+        text: `Agar tumhari age 20 se 30 ke beech hai, toh yeh financial advice miss mat karna.\n[PAUSE 1.5]\nHar mahine salary ka 20% index funds mein invest karo. 10 saal baad compounding magic dekh kar hairan reh jaoge!`,
       },
       {
         title: '⚡ Hinglish Gym & Hustle Motivation (Fenrir Voice)',
         description: 'High-intensity workout and discipline booster',
-        text: `Kal se start karunga? Yeh bolte bolte kitne mahine nikal gaye?\n\n[PAUSE 1.5]\n\nExcuses se body nahi banti, discipline se banti hai. Utho, shoes pehno aur hit the gym!`,
+        text: `Kal se start karunga? Yeh bolte bolte kitne mahine nikal gaye?\n[PAUSE 1.5]\nExcuses se body nahi banti, discipline se banti hai. Utho, shoes pehno aur hit the gym!`,
       },
     ],
   },
@@ -581,17 +581,17 @@ export const LANGUAGES: LanguageOption[] = [
       {
         title: '🎬 Tanglish Movie Review (Iapetus Voice)',
         description: 'Authentic cinema review and theatre verdict hook',
-        text: `Vanakkam makkale! Innaiku release aana blockbuster movie pathi oru honest review.\n\n[PAUSE 1.5]\n\nFirst half full-on fire screenplay, BGM vera level! Aana second half twist nenga expect-ey pannirukka maatinga.\n\nThியேட்டர் poi paakkalaama venama? Let's break it down!`,
+        text: `Vanakkam makkale! Innaiku release aana blockbuster movie pathi oru honest review.\n[PAUSE 1.5]\nFirst half full-on fire screenplay, BGM vera level! Aana second half twist nenga expect-ey pannirukka maatinga.\nTheatre poi paakkalaama venama? Let's break it down!`,
       },
       {
         title: '📱 Tanglish Smartphone Unboxing (Puck Voice)',
         description: 'Snappy gadget reel for tech channels',
-        text: `Intha budget-la 200MP camera phone-ah?! Namba mudiyala!\n\n[PAUSE 1.5]\n\nCamera samples paatha ungaluke theriyum—low light shots vera level clarity.\n\nFull specs and pricing video-kku bio link click pannunga!`,
+        text: `Intha budget-la 200MP camera phone-ah?! Namba mudiyala!\n[PAUSE 1.5]\nCamera samples paatha ungaluke theriyum—low light shots vera level clarity.\nFull specs and pricing video-kku bio link click pannunga!`,
       },
       {
         title: '🏛️ Tanglish History & Temple Mystery (Charon Voice)',
         description: 'Chola architecture mystery narration',
-        text: `Thanjavur Periya Kovil gopuram mela irukkira antha 80-ton kal... epdi avlo uyaram kondu ponaanga?\n\n[PAUSE 2]\n\nAayiram varusham aagiyum, indraikkum aaraaychiyalar-galukku oru periya mystery-ah irukku.`,
+        text: `Thanjavur Periya Kovil gopuram mela irukkira antha 80-ton kal... epdi avlo uyaram kondu ponaanga?\n[PAUSE 2]\nAayiram varusham aagiyum, indraikkum aaraaychiyalar-galukku oru periya mystery-ah irukku.`,
       },
     ],
   },
@@ -621,17 +621,17 @@ export const LANGUAGES: LanguageOption[] = [
       {
         title: '🚀 Tenglish Tech & Coding Roadmap (Puck Voice)',
         description: 'High-retention reel for software engineering aspirants',
-        text: `Hello friends! Meelo evaraina coding start cheyali anukuntunnara?\n\n[PAUSE 1.5]\n\nPython vs Java—2025 lo ye language nerchukunte high paying jobs vastayi?\n\nEe video lo complete roadmap clear ga explain chesta. Save this reel right now!`,
+        text: `Hello friends! Meelo evaraina coding start cheyali anukuntunnara?\n[PAUSE 1.5]\nPython vs Java—2025 lo ye language nerchukunte high paying jobs vastayi?\nEe video lo complete roadmap clear ga explain chesta. Save this reel right now!`,
       },
       {
         title: '🎬 Tenglish Mass Teaser Review (Fenrir / Charon Voice)',
         description: 'Mass cinema elevation review for Telugu movie lovers',
-        text: `Box office record-lu baddalayye time vachindi!\n\n[PAUSE 2]\n\nTeaser lo hero elevation shots choosara? Background music next level goosebumps!\n\nIppude release date announce chesaru—theatre lo mass jathara pakka!`,
+        text: `Box office record-lu baddalayye time vachindi!\n[PAUSE 2]\nTeaser lo hero elevation shots choosara? Background music next level goosebumps!\nIppude release date announce chesaru—theatre lo mass jathara pakka!`,
       },
       {
         title: '💡 Tenglish Personal Savings (Iapetus Voice)',
         description: 'Relatable money management tips for freshers',
-        text: `Mee salary account lo dabbulu ela save cheyalo theleeda?\n\n[PAUSE 1.5]\n\nEmergency fund create cheyadam first priority. At least 6 months expenses save chesi pettukondi.\n\nMore money tips kosam page ni follow cheyandi!`,
+        text: `Mee salary account lo dabbulu ela save cheyalo theleeda?\n[PAUSE 1.5]\nEmergency fund create cheyadam first priority. At least 6 months expenses save chesi pettukondi.\nMore money tips kosam page ni follow cheyandi!`,
       },
     ],
   },
@@ -661,17 +661,17 @@ export const LANGUAGES: LanguageOption[] = [
       {
         title: '🌴 Manglish Travel & Food Vlog (Iapetus Voice)',
         description: 'Charming Kerala travel reel script',
-        text: `Namaskaram friends! Munnar-ile ee secret off-road location ninnalkk ariyamo?\n\n[PAUSE 1.5]\n\nTourist crowds onnum illaatha oru kidilan viewpoints and fresh tea plantations!\n\nKochi-yil ninnu 4 hours drive maathram. Ee weekend trip plan cheyyunnundengil save this reel!`,
+        text: `Namaskaram friends! Munnar-ile ee secret off-road location ninnalkk ariyamo?\n[PAUSE 1.5]\nTourist crowds onnum illaatha oru kidilan viewpoints and fresh tea plantations!\nKochi-yil ninnu 4 hours drive maathram. Ee weekend trip plan cheyyunnundengil save this reel!`,
       },
       {
         title: '🎙️ Manglish Cinema Analysis (Charon Voice)',
         description: 'Thoughtful movie breakdown script',
-        text: `Malayalam cinema-yile oru timeless psychological thriller...\n\n[PAUSE 2]\n\nClimax scene-il director hide cheytha subtle clues ninnalkk notice cheyyaan pattiyaarno?\n\nInnathe video-yil detailed breakdown kaanaam.`,
+        text: `Malayalam cinema-yile oru timeless psychological thriller...\n[PAUSE 2]\nClimax scene-il director hide cheytha subtle clues ninnalkk notice cheyyaan pattiyaarno?\nInnathe video-yil detailed breakdown kaanaam.`,
       },
       {
         title: '📱 Manglish Productivity Tip (Kore Voice)',
         description: 'Clean time-management explainer',
-        text: `Focus kittaan madi thonunno? Try the 25-minute Pomodoro technique.\n\n[PAUSE 1.5]\n\nMobile phone silent aakki oru dedicated task-il concentrate cheyyoo. Daily productivity double aakum!`,
+        text: `Focus kittaan madi thonunno? Try the 25-minute Pomodoro technique.\n[PAUSE 1.5]\nMobile phone silent aakki oru dedicated task-il concentrate cheyyoo. Daily productivity double aakum!`,
       },
     ],
   },
@@ -701,12 +701,36 @@ export const LANGUAGES: LanguageOption[] = [
       {
         title: '🇮🇳 Step-by-Step Indian Explainer (Charon Voice)',
         description: 'Authentic Indian English tutorial delivery for PAN/Aadhaar/Tech guides',
-        text: `In this video, I will show you how to link your Aadhaar card with your bank account online, step-by-step.\n\n[PAUSE 1.5]\n\nPlease keep your registered mobile number handy for OTP verification. Let's get started!`,
+        text: `In this video, I will show you how to link your Aadhaar card with your bank account online, step-by-step.\n[PAUSE 1.5]\nPlease keep your registered mobile number handy for OTP verification. Let's get started!`,
       },
       {
         title: '🎙️ Tech Review & Vlog (Iapetus Voice)',
         description: 'Friendly Indian English conversational review for YouTube & reels',
-        text: `Hey guys, welcome back to the channel! Today we are testing this brand new wireless mic.\n\n[PAUSE 1.5]\n\nThe sound clarity is surprisingly clean, especially for outdoor shooting. Let me show you a quick sound test right now!`,
+        text: `Hey guys, welcome back to the channel! Today we are testing this brand new wireless mic.\n[PAUSE 1.5]\nThe sound clarity is surprisingly clean, especially for outdoor shooting. Let me show you a quick sound test right now!`,
+      },
+    ],
+  },
+  {
+    code: 'indian_universal',
+    name: 'Universal Indian Code-Switching',
+    nativeName: 'Hinglish / Kanglish / Tanglish / Manglish',
+    flag: '🇮🇳',
+    badge: '🌟 All-in-One Indian Multilingual Blend',
+    description: 'Universal Indian accent optimized for scripts mixing English with Hindi, Kannada, Tamil, Telugu, Malayalam, or Marathi with natural regional cadence',
+    recommendedVoices: ['Charon', 'Iapetus', 'Puck', 'Kore', 'Fenrir', 'Achird'],
+    voiceSuitability: {
+      Charon: '🎙️ #1 Top Pick — Authoritative, warm Indian explainer & tutorials',
+      Iapetus: '⭐ #1 Top Pick — Friendly, conversational podcast & everyday vlog host',
+      Puck: '🔥 Top Pick — High-energy viral reels & tech banter',
+      Kore: '✨ Top Pick — Clean corporate & educational explainers',
+      Fenrir: '⚡ Powerful motivational hooks',
+      Achird: '💡 Clear articulate guides',
+    },
+    sampleScripts: [
+      {
+        title: '🌟 Universal Indian Multilingual Reel Hook',
+        description: 'Blends English with multi-regional Indian phrasing and natural cadence',
+        text: `Hello doston! Are you searching for the best AI tool to create voice-overs?\n[PAUSE 1.5]\nNamma appalli, very easily you can generate studio-quality audio in seconds. Try it out today!`,
       },
     ],
   },
@@ -735,7 +759,7 @@ export const LANGUAGES: LanguageOption[] = [
       {
         title: 'Suspense Mystery (with [PAUSE])',
         description: 'Timed silence pauses [PAUSE 2] & [PAUSE 3] for video cuts & suspense',
-        text: `Quinn found a note...\n\nwritten in her own handwriting.\n\n[PAUSE 2]\n\nIt said:\n\n"Do NOT look under the table."\n\n[PAUSE 3]`,
+        text: `Quinn found a note...\nwritten in her own handwriting.\n[PAUSE 2]\nIt said:\n"Do NOT look under the table."\n[PAUSE 3]`,
       },
       {
         title: 'YouTube Short Hook (15s)',
@@ -766,7 +790,7 @@ export const LANGUAGES: LanguageOption[] = [
       {
         title: '🎙️ ಕನ್ನಡ ರಹಸ್ಯ ಕಥೆ - ಚಾರೋನ್ ವಾಯ್ಸ್ (Deep Kannada Mystery)',
         description: 'ಆಳವಾದ ಗಂಭೀರ ನಿರೂಪಣೆ (Charon ಗಂಡು ಧ್ವನಿಗೆ ಸೂಕ್ತ)',
-        text: `ಕರ್ನಾಟಕದ ಇತಿಹಾಸದಲ್ಲಿ ಈ ಒಂದು ಕೋಟೆ ಇಂದಿಗೂ ರಹಸ್ಯವಾಗಿ ಉಳಿದಿದೆ...\n\n[PAUSE 2]\n\nಯಾರೂ ಪ್ರವೇಶಿಸದ ಆ ಕತ್ತಲೆಯ ಸುರಂಗದೊಳಗೆ ಏನು ಅಡಗಿದೆ? ಇಂದಿನ ಸಂಚಿಕೆಯಲ್ಲಿ ತಿಳಿಯೋಣ.`,
+        text: `ಕರ್ನಾಟಕದ ಇತಿಹಾಸದಲ್ಲಿ ಈ ಒಂದು ಕೋಟೆ ಇಂದಿಗೂ ರಹಸ್ಯವಾಗಿ ಉಳಿದಿದೆ...\n[PAUSE 2]\nಯಾರೂ ಪ್ರವೇಶಿಸದ ಆ ಕತ್ತಲೆಯ ಸುರಂಗದೊಳಗೆ ಏನು ಅಡಗಿದೆ? ಇಂದಿನ ಸಂಚಿಕೆಯಲ್ಲಿ ತಿಳಿಯೋಣ.`,
       },
       {
         title: '✨ ಕನ್ನಡ ಪ್ರೇರಣಾದಾಯಕ ಮಾತುಗಳು (Motivational Narration)',
@@ -794,6 +818,7 @@ export interface GeneratedVoiceRecord {
   fileSizeBytes: number;
   fileName: string;
   source?: 'gemini' | 'studio-engine';
+  title?: string;
 }
 
 export interface StudioPreset {

@@ -126,16 +126,24 @@ function prepareScriptForTTS(
   const promptParts: string[] = [];
 
   // Language & Accent Directives only when non-standard English is chosen
-  if (langKey === 'kanglish' || langKey === 'kn-en') {
-    promptParts.push('Language: Kanglish (natural conversational blend of Kannada and English). Speak with fluent Indian English cadence and smooth colloquial code-switching.');
-  } else if (langKey === 'hinglish' || langKey === 'hi-en') {
-    promptParts.push('Language: Hinglish (natural conversational blend of Hindi and English). Speak with relatable Indian cadence and authentic code-switching.');
-  } else if (langKey === 'tamil_en' || langKey === 'ta-en') {
-    promptParts.push('Language: Tanglish (Tamil and English blend). Speak with natural South Indian cadence and engaging Tamil-English code-switching.');
-  } else if (langKey === 'telugu_en' || langKey === 'te-en') {
-    promptParts.push('Language: Tenglish (Telugu and English blend). Speak with energetic Indian cadence and Telugu-English code-switching.');
-  } else if (langKey === 'malayalam_en' || langKey === 'ml-en') {
-    promptParts.push('Language: Manglish (Malayalam and English blend). Speak with natural Kerala cadence and smooth Malayalam-English code-switching.');
+  if (
+    langKey === 'kanglish' ||
+    langKey === 'kn-en' ||
+    langKey === 'hinglish' ||
+    langKey === 'hi-en' ||
+    langKey === 'tamil_en' ||
+    langKey === 'ta-en' ||
+    langKey === 'telugu_en' ||
+    langKey === 'te-en' ||
+    langKey === 'malayalam_en' ||
+    langKey === 'ml-en' ||
+    langKey === 'indian_universal' ||
+    langKey === 'universal_indian' ||
+    langKey === 'multilingual_indian'
+  ) {
+    promptParts.push(
+      'Language & Accent: Universal Indian Multilingual Code-Switching (Hinglish, Kanglish, Tanglish, Tenglish, Manglish). Seamlessly blend English with Indian regional terms across Hindi, Kannada, Tamil, Telugu, and Malayalam using a natural, authentic Indian conversational cadence and smooth code-switching rhythm.'
+    );
   } else if (langKey === 'en-in' || langKey === 'en_in' || langKey === 'indian_en') {
     promptParts.push('Language & Accent: Indian English. Speak with a natural, authentic Indian English accent, clear pronunciation, and conversational rhythm.');
     if (isCharon) {
@@ -143,6 +151,8 @@ function prepareScriptForTTS(
     } else if (voice.toLowerCase() === 'iapetus') {
       promptParts.push('Persona: Friendly, grounded Indian male conversationalist with everyday relatable cadence.');
     }
+  } else if (langKey === 'indian_universal' || langKey === 'universal_indian' || langKey === 'multilingual_indian') {
+    promptParts.push('Language & Accent: Universal Indian Multilingual Code-Switching. Seamlessly blend English with Indian regional terms (Hindi, Kannada, Tamil, Telugu, Malayalam, Marathi) using a natural, authentic Indian conversational cadence and smooth code-switching rhythm.');
   } else if (langKey === 'kn' || langKey === 'kannada') {
     promptParts.push('Language: Kannada. Speak with clear, authentic native Kannada articulation.');
   }
