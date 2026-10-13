@@ -3,6 +3,7 @@ import dotenv from 'dotenv';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { synthesizeVoice } from './server/ttsService';
+import { matchVoiceClip } from './server/voiceMatchService';
 
 dotenv.config();
 
@@ -12,7 +13,8 @@ const __dirname = path.dirname(__filename);
 const app = express();
 const port = process.env.PORT || 3000;
 
-app.use(express.json({ limit: '10mb' }));
+app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ limit: '50mb', extended: true }));
 
 // API: Health check
 app.get('/api/health', (_req, res) => {
@@ -22,6 +24,21 @@ app.get('/api/health', (_req, res) => {
     hasAuthProtected: Boolean(process.env.VOXSTUDIO_API_KEY),
     timestamp: new Date().toISOString(),
   });
+});
+
+// API: Match Voice Clip
+app.post('/api/match-voice-clip', async (req, res) => {
+  try {
+    const userApiKey = (req.headers['x-gemini-api-key'] as string) || req.body?.apiKey;
+    const result = await matchVoiceClip(req.body, userApiKey);
+    if (!result.success) {
+      return res.status(500).json(result);
+    }
+    return res.json(result);
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : 'Internal server error';
+    return res.status(500).json({ success: false, error: message });
+  }
 });
 
 // API: OpenAPI schema for n8n and AI tool integration

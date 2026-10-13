@@ -89,7 +89,8 @@ export const VoiceAuditionModal: React.FC<VoiceAuditionModalProps> = ({
 
     const emotionName = currentEmotion?.name || 'Natural';
     const emotionId = currentEmotion?.id || 'default';
-    const cacheKey = `${voice.id}_${emotionId}_${Math.round(pace * 100)}_${pitch}`;
+    const langCode = currentLanguage?.code || 'en-in';
+    const cacheKey = `${voice.id}_${langCode}_${emotionId}_${Math.round(pace * 100)}_${pitch}`;
 
     const startPlayback = (audioUrl: string) => {
       const audio = new Audio(audioUrl);
@@ -136,6 +137,7 @@ export const VoiceAuditionModal: React.FC<VoiceAuditionModalProps> = ({
         body: JSON.stringify({
           script: voice.sampleText,
           voice: voice.id,
+          language: langCode,
           emotion: emotionName,
           pace,
           pitch,

@@ -23,10 +23,10 @@ export interface GenerateVoiceResponse {
 
 // Ordered list of Gemini TTS models (primary proven fast TTS endpoint)
 const PRIMARY_TTS_MODELS = [
+  'gemini-3.8-flash-lite-tts',
+  'gemini-3.8-flash-tts',
   'gemini-2.5-flash-preview-tts',
   'gemini-2.5-pro-preview-tts',
-  'gemini-3.8-flash-tts',
-  'gemini-3.8-flash-lite-tts',
 ];
 
 /**
@@ -72,35 +72,88 @@ export const EMOTION_INSTRUCTIONS: Record<string, string> = {
   default: 'Speak in a natural, clear, engaging conversational delivery with balanced articulation.',
 };
 
+/**
+ * Resolves BCP-47 language tag for Gemini TTS speechConfig.
+ * Passing explicit languageCode (e.g. 'en-IN') ensures authentic regional
+ * phonetics, cadence, and pronunciation rather than default US English.
+ */
+export function getBcp47LanguageCode(language?: string): string {
+  if (!language) return 'en-IN';
+  const norm = language.toLowerCase().trim();
+  if (
+    norm === 'en-in' ||
+    norm === 'en_in' ||
+    norm === 'indian_en' ||
+    norm.includes('india') ||
+    norm.includes('indian') ||
+    norm === 'indian_universal' ||
+    norm === 'universal_indian' ||
+    norm === 'multilingual_indian'
+  ) {
+    return 'en-IN';
+  }
+  if (norm === 'kanglish' || norm === 'kn-en') {
+    return 'en-IN';
+  }
+  if (norm === 'hinglish' || norm === 'hi-en') {
+    return 'en-IN';
+  }
+  if (norm === 'tamil_en' || norm === 'ta-en') {
+    return 'en-IN';
+  }
+  if (norm === 'telugu_en' || norm === 'te-en') {
+    return 'en-IN';
+  }
+  if (norm === 'malayalam_en' || norm === 'ml-en' || norm.includes('manglish')) {
+    return 'en-IN';
+  }
+  if (norm === 'kn' || norm === 'kannada') {
+    return 'kn-IN';
+  }
+  if (norm === 'hi' || norm === 'hindi') {
+    return 'hi-IN';
+  }
+  if (norm === 'ta' || norm === 'tamil') {
+    return 'ta-IN';
+  }
+  if (norm === 'te' || norm === 'telugu') {
+    return 'te-IN';
+  }
+  if (norm === 'ml' || norm === 'malayalam') {
+    return 'ml-IN';
+  }
+  if (norm === 'en' || norm === 'en-us' || norm === 'english' || norm.includes('us')) {
+    return 'en-US';
+  }
+  if (norm === 'en-gb' || norm.includes('uk') || norm.includes('british')) {
+    return 'en-GB';
+  }
+  return 'en-IN';
+}
+
 // In-memory cache for synthesized voice clips
 const voiceCache = new Map<string, GenerateVoiceResponse>();
 
 function getCacheKey(
   script: string,
   voice: string,
-  language: string,
+  languageCode: string,
   emotion: string,
   pace = 1.0,
   pitch = 'Default'
 ): string {
   const roundedPace = Number(pace || 1.0).toFixed(2);
   const normalizedPitch = String(pitch || 'Default').toLowerCase();
-  return `${voice.toLowerCase()}_${language.toLowerCase()}_${emotion.toLowerCase()}_${roundedPace}_${normalizedPitch}_${script.trim()}`;
+  return `v5_${voice.toLowerCase()}_${languageCode.toLowerCase()}_${emotion.toLowerCase()}_${roundedPace}_${normalizedPitch}_${script.trim()}`;
 }
 
 /**
- * Prepares the script and delivery conditioning for Gemini TTS.
- * Preserves the authentic native voice characteristics (e.g. Charon's signature warm,
- * deep baritone matching the reference voice file) without intrusive prompt-stuffing.
+ * Prepares the script for Gemini TTS.
+ * Converts [PAUSE x] timing tags into natural speech pauses (commas/ellipses)
+ * and strips any bracketed annotations so the voice engine NEVER reads
+ * stage directions aloud as spoken text.
  */
-function prepareScriptForTTS(
-  script: string,
-  emotion = 'Default',
-  language = 'en',
-  voice = 'Charon',
-  pace = 1.0,
-  pitch = 'Default'
-): string {
+function prepareScriptForTTS(script: string): string {
   let processed = script.replace(/\[\s*PAUSE\s*(\d+(?:\.\d+)?)\s*(?:s|sec|seconds)?\s*\]/gi, (_, sec) => {
     const s = parseFloat(sec);
     if (s >= 3.0) return ' ... ... ... ';
@@ -109,84 +162,9 @@ function prepareScriptForTTS(
     return ', ';
   });
 
+  // Strip all bracketed tags so the TTS model treats the text strictly as verbatim transcript
   processed = processed.replace(/\[[^\]]*\]/g, ' ').replace(/[ \t]{2,}/g, ' ').trim();
-
-  const isCharon = voice.toLowerCase() === 'charon';
-  const langKey = language.toLowerCase();
-  const emotionKey = emotion.toLowerCase().replace(/[^a-z]/g, '');
-  const isDefaultEmotion = !emotionKey || emotionKey === 'default' || emotionKey === 'neutral';
-  const isEnglish = !langKey || langKey === 'en' || langKey === 'english';
-
-  // If this is default English narration (especially Charon), return pure text to preserve
-  // 100% of the prebuilt voice's native tone and timbre matching the reference audio.
-  if (isDefaultEmotion && isEnglish && Math.abs(pace - 1.0) < 0.05 && (!pitch || pitch === 'Default')) {
-    return processed;
-  }
-
-  const promptParts: string[] = [];
-
-  // Language & Accent Directives only when non-standard English is chosen
-  if (
-    langKey === 'kanglish' ||
-    langKey === 'kn-en' ||
-    langKey === 'hinglish' ||
-    langKey === 'hi-en' ||
-    langKey === 'tamil_en' ||
-    langKey === 'ta-en' ||
-    langKey === 'telugu_en' ||
-    langKey === 'te-en' ||
-    langKey === 'malayalam_en' ||
-    langKey === 'ml-en' ||
-    langKey === 'indian_universal' ||
-    langKey === 'universal_indian' ||
-    langKey === 'multilingual_indian'
-  ) {
-    promptParts.push(
-      'Language & Accent: Universal Indian Multilingual Code-Switching (Hinglish, Kanglish, Tanglish, Tenglish, Manglish). Seamlessly blend English with Indian regional terms across Hindi, Kannada, Tamil, Telugu, and Malayalam using a natural, authentic Indian conversational cadence and smooth code-switching rhythm.'
-    );
-  } else if (langKey === 'en-in' || langKey === 'en_in' || langKey === 'indian_en') {
-    promptParts.push('Language & Accent: Indian English. Speak with a natural, authentic Indian English accent, clear pronunciation, and conversational rhythm.');
-    if (isCharon) {
-      promptParts.push('Persona: Warm, authoritative Indian male explainer and tutorial narrator.');
-    } else if (voice.toLowerCase() === 'iapetus') {
-      promptParts.push('Persona: Friendly, grounded Indian male conversationalist with everyday relatable cadence.');
-    }
-  } else if (langKey === 'indian_universal' || langKey === 'universal_indian' || langKey === 'multilingual_indian') {
-    promptParts.push('Language & Accent: Universal Indian Multilingual Code-Switching. Seamlessly blend English with Indian regional terms (Hindi, Kannada, Tamil, Telugu, Malayalam, Marathi) using a natural, authentic Indian conversational cadence and smooth code-switching rhythm.');
-  } else if (langKey === 'kn' || langKey === 'kannada') {
-    promptParts.push('Language: Kannada. Speak with clear, authentic native Kannada articulation.');
-  }
-
-  // Emotion / Tone instruction
-  if (!isDefaultEmotion) {
-    const matchedKey = Object.keys(EMOTION_INSTRUCTIONS).find((k) => emotionKey.includes(k));
-    if (matchedKey && EMOTION_INSTRUCTIONS[matchedKey]) {
-      promptParts.push(`Tone: ${EMOTION_INSTRUCTIONS[matchedKey]}`);
-    }
-  } else if (isCharon) {
-    // Keep Charon grounded in its signature calm, warm baritone
-    promptParts.push('Tone: Calm, warm, and natural conversational storytelling with clear, grounded cadence.');
-  }
-
-  // Pace directive
-  if (pace && Math.abs(pace - 1.0) >= 0.04) {
-    if (pace < 0.95) {
-      promptParts.push(`Pacing: Speak in a measured, deliberate tempo taking steady pauses.`);
-    } else if (pace > 1.05) {
-      promptParts.push(`Pacing: Speak with brisk, upbeat energy and quick conversational flow.`);
-    }
-  }
-
-  // Pitch directive
-  if (pitch && pitch !== 'Default') {
-    promptParts.push(`Pitch: Deliver in a ${pitch.toLowerCase()} vocal register.`);
-  }
-
-  if (promptParts.length === 0) {
-    return processed;
-  }
-
-  return `[Style Directives: ${promptParts.join(' ')}]\n\n${processed}`;
+  return processed;
 }
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
@@ -226,13 +204,16 @@ export async function synthesizeVoice(
     (v) => v.toLowerCase() === targetVoice
   ) || 'Charon';
 
-  // Check cache first (includes exact pace and pitch to prevent stale reuse)
-  const cacheKey = getCacheKey(script, matchedVoice, language, emotion, pace, pitch);
+  // Determine accurate BCP-47 locale (e.g. en-IN for Indian English)
+  const targetLanguageCode = getBcp47LanguageCode(language);
+
+  // Check cache first (includes language code, pace, pitch, and voice to prevent stale reuse)
+  const cacheKey = getCacheKey(script, matchedVoice, targetLanguageCode, emotion, pace, pitch);
   if (voiceCache.has(cacheKey)) {
     return { ...voiceCache.get(cacheKey)! };
   }
 
-  const ttsText = prepareScriptForTTS(script, emotion, language, matchedVoice, pace, pitch);
+  const ttsText = prepareScriptForTTS(script);
   const ai = new GoogleGenAI({ apiKey: geminiApiKey });
 
   let lastError: unknown = null;
@@ -252,6 +233,7 @@ export async function synthesizeVoice(
                   voiceName: matchedVoice,
                 },
               },
+              languageCode: targetLanguageCode,
             },
             seed: 42,
           },

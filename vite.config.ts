@@ -4,6 +4,7 @@ import path from 'path';
 import { defineConfig, Plugin } from 'vite';
 import dotenv from 'dotenv';
 import { synthesizeVoice } from './server/ttsService';
+import { matchVoiceClip } from './server/voiceMatchService';
 
 dotenv.config();
 
@@ -24,6 +25,33 @@ function apiPlugin(): Plugin {
           return;
         }
 
+        if (req.url === '/api/match-voice-clip' && req.method === 'POST') {
+          let bodyStr = '';
+          req.on('data', (chunk) => {
+            bodyStr += chunk;
+          });
+          req.on('end', async () => {
+            try {
+              const userApiKey = (req.headers['x-gemini-api-key'] as string);
+              const body = JSON.parse(bodyStr || '{}');
+              const result = await matchVoiceClip(body, userApiKey);
+              res.setHeader('Content-Type', 'application/json');
+              res.statusCode = result.success ? 200 : 500;
+              res.end(JSON.stringify(result));
+            } catch (err: unknown) {
+              res.setHeader('Content-Type', 'application/json');
+              res.statusCode = 500;
+              res.end(
+                JSON.stringify({
+                  success: false,
+                  error: err instanceof Error ? err.message : 'Server error',
+                })
+              );
+            }
+          });
+          return;
+        }
+
         if (req.url === '/api/generate-voice' && req.method === 'POST') {
           let bodyStr = '';
           req.on('data', (chunk) => {
@@ -31,12 +59,13 @@ function apiPlugin(): Plugin {
           });
           req.on('end', async () => {
             try {
+              const userApiKey = (req.headers['x-gemini-api-key'] as string);
               const body = JSON.parse(bodyStr || '{}');
-              const result = await synthesizeVoice(body);
+              const result = await synthesizeVoice(body, userApiKey);
               res.setHeader('Content-Type', 'application/json');
               res.statusCode = result.success
                 ? 200
-                : result.error?.includes('cooling down')
+                : (result.retryAfterSec !== undefined || result.error?.includes('quota') || result.error?.includes('cooling down'))
                   ? 429
                   : 500;
               res.end(JSON.stringify(result));

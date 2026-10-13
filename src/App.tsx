@@ -30,6 +30,11 @@ import {
   Gauge,
   SlidersHorizontal,
   FileText,
+  Trash2,
+  CheckSquare,
+  Square,
+  Archive,
+  CheckCircle2,
 } from 'lucide-react';
 import {
   VoiceOption,
@@ -51,6 +56,7 @@ import { AudioPlayer } from './components/AudioPlayer';
 import { VoiceAuditionModal } from './components/VoiceAuditionModal';
 import { ApiKeyModal } from './components/ApiKeyModal';
 import { PresetManager } from './components/PresetManager';
+import { VoiceMatchSection } from './components/VoiceMatchSection';
 import {
   base64ToWavArrayBuffer,
   processAudio,
@@ -58,9 +64,92 @@ import {
   parseScriptSections,
 } from './utils/audioEngine';
 import { wavBlobToMp3Blob } from './utils/wavUtils';
+import { auth, googleProvider } from './lib/firebase';
+import { signInWithPopup, signOut, onAuthStateChanged, User } from 'firebase/auth';
+import JSZip from 'jszip';
 
 export default function App() {
   // State
+  const [currentUser, setCurrentUser] = useState<User | null>(null);
+  const [selectedTakeIds, setSelectedTakeIds] = useState<Set<string>>(new Set());
+
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      setCurrentUser(user);
+    });
+    return () => unsubscribe();
+  }, []);
+
+  const handleSignIn = async () => {
+    try {
+      await signInWithPopup(auth, googleProvider);
+    } catch (error) {
+      console.error('Sign-in error:', error);
+      alert('Sign-in failed. Please try again.');
+    }
+  };
+
+  const handleSignOut = async () => {
+    try {
+      await signOut(auth);
+    } catch (error) {
+      console.error('Sign-out error:', error);
+    }
+  };
+
+  const toggleSelectAllTakes = () => {
+    if (selectedTakeIds.size === history.length) {
+      setSelectedTakeIds(new Set());
+    } else {
+      setSelectedTakeIds(new Set(history.map((t) => t.id)));
+    }
+  };
+
+  const toggleSelectTake = (id: string) => {
+    setSelectedTakeIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const handleDeleteTake = (id: string) => {
+    setHistory((prev) => prev.filter((t) => t.id !== id));
+    setSelectedTakeIds((prev) => {
+      const next = new Set(prev);
+      next.delete(id);
+      return next;
+    });
+    if (currentTake?.id === id) {
+      setCurrentTake(history.find((t) => t.id !== id) || null);
+    }
+  };
+
+  const handleDownloadSelectedZip = async () => {
+    const selectedTakes = history.filter((t) => selectedTakeIds.has(t.id));
+    if (selectedTakes.length === 0) return;
+
+    try {
+      const zip = new JSZip();
+      for (const take of selectedTakes) {
+        const filename = take.fileName || `vox_${take.voice}_take.wav`;
+        zip.file(filename, take.wavBlob);
+      }
+      const content = await zip.generateAsync({ type: 'blob' });
+      const url = URL.createObjectURL(content);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `gowthamora_vods_bundle_${Date.now()}.zip`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    } catch (e) {
+      console.error('ZIP download error:', e);
+      alert('Failed to generate ZIP bundle.');
+    }
+  };
+
   const [script, setScript] = useState<string>('');
   const [selectedVoice, setSelectedVoice] = useState<VoiceOption>(
     GEMINI_VOICES.find((v) => v.id === 'Iapetus') || GEMINI_VOICES[0]
@@ -90,6 +179,10 @@ export default function App() {
     try {
       if (key) {
         localStorage.setItem('vox_gemini_api_key_v1', key);
+        setSessionQuota(100);
+        setCooldownSeconds(0);
+        setCooldownReadyNotification(false);
+        setIsCooldownBannerDismissed(false);
       } else {
         localStorage.removeItem('vox_gemini_api_key_v1');
       }
@@ -142,45 +235,74 @@ export default function App() {
   const [isGenerating, setIsGenerating] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [cooldownSeconds, setCooldownSeconds] = useState<number>(0);
+  const [sessionQuota, setSessionQuota] = useState<number>(100);
+  const [cooldownReadyNotification, setCooldownReadyNotification] = useState<boolean>(false);
+  const [isCooldownBannerDismissed, setIsCooldownBannerDismissed] = useState<boolean>(false);
   const [currentTake, setCurrentTake] = useState<GeneratedVoiceRecord | null>(null);
   const [history, setHistory] = useState<GeneratedVoiceRecord[]>([]);
   const [showHistory, setShowHistory] = useState(false);
   const [playTrigger, setPlayTrigger] = useState<number>(0);
 
-  // Auto-sync emotion recommendations
+  // Emotion change handler - preserves user's chosen voice, pace, and language
   const handleEmotionChange = (emotion: EmotionOption) => {
     setSelectedEmotion(emotion);
-    const recommended = GEMINI_VOICES.find(
-      (v) => v.id.toLowerCase() === emotion.recommendedVoice.toLowerCase()
-    );
-    if (recommended && emotion.id !== 'default') {
-      setPace(emotion.suggestedPace);
-    }
   };
 
-  // Language switch handler
+  // Language switch handler - preserves user's chosen voice
   const handleLanguageChange = (lang: LanguageOption) => {
     setSelectedLanguage(lang);
-    // Auto-select #1 recommended voice if current voice is not recommended for this language
-    if (lang.recommendedVoices && lang.recommendedVoices.length > 0) {
-      if (!lang.recommendedVoices.includes(selectedVoice.id)) {
-        const topVoice = GEMINI_VOICES.find((v) => v.id === lang.recommendedVoices[0]);
-        if (topVoice) {
-          setSelectedVoice(topVoice);
-        }
-      }
-    }
   };
 
-  // Preset apply handler - sets Voice, Emotion, Pace, and Pitch together in 1 click
-  const handleApplyPreset = (preset: StudioPreset) => {
-    const foundVoice = GEMINI_VOICES.find(
-      (v) => v.id.toLowerCase() === preset.voiceId.toLowerCase()
-    );
-    if (foundVoice) {
-      setSelectedVoice(foundVoice);
-    }
+  const resolveMatchedLanguage = (langStr?: string): LanguageOption => {
+    if (!langStr) return LANGUAGES.find((item) => item.code === 'en-in') || LANGUAGES[0];
+    const norm = langStr.toLowerCase().trim();
 
+    const matched = LANGUAGES.find((item) => {
+      const code = item.code.toLowerCase();
+      const name = item.name.toLowerCase();
+      if (code === norm || name === norm) return true;
+      if (norm === 'en-in' && code === 'en-in') return true;
+      if (norm.includes('india') && (code === 'en-in' || name.includes('india') || name.includes('indian'))) return true;
+      if (norm.includes('kanglish') || norm.includes('kannada')) return code === 'kanglish';
+      if (norm.includes('hinglish') || norm.includes('hindi')) return code === 'hinglish';
+      if (norm.includes('tamil')) return code === 'tamil_en';
+      if (norm.includes('telugu')) return code === 'telugu_en';
+      if (norm.includes('malayalam') || norm.includes('manglish')) return code === 'malayalam_en';
+      return false;
+    });
+
+    return matched || LANGUAGES.find((item) => item.code === 'en-in') || LANGUAGES[0];
+  };
+
+  const handleApplyMatchedSettings = (settings: { voice: string; emotion: string; pace: number; language: string; pitch: string }) => {
+    const v = GEMINI_VOICES.find(item => item.name.toLowerCase() === settings.voice.toLowerCase()) || GEMINI_VOICES[0];
+    setSelectedVoice(v);
+    const e = EMOTIONS.find(item => item.name.toLowerCase() === settings.emotion.toLowerCase()) || EMOTIONS[0];
+    setSelectedEmotion(e);
+    setPace(settings.pace);
+    setPitch(settings.pitch as PitchLevel);
+    const l = resolveMatchedLanguage(settings.language);
+    setSelectedLanguage(l);
+    setErrorMessage(null);
+    return { v, e, l };
+  };
+
+  const handleGenerateMatchedScript = async (matchScript: string, settings: { voice: string; emotion: string; pace: number; language: string; pitch: string }) => {
+    const { v, e, l } = handleApplyMatchedSettings(settings);
+    setScript(matchScript);
+    await handleGenerateVoice({
+      script: matchScript,
+      voice: v,
+      language: l,
+      emotion: e,
+      pace: settings.pace,
+      pitch: settings.pitch as PitchLevel,
+      title: 'Matched Voice-Over',
+    });
+  };
+
+  // Preset apply handler - applies Emotion, Pace, and Pitch styling without clobbering chosen Voice or Language
+  const handleApplyPreset = (preset: StudioPreset) => {
     const foundEmotion = EMOTIONS.find(
       (e) => e.id.toLowerCase() === preset.emotionId.toLowerCase()
     );
@@ -191,7 +313,18 @@ export default function App() {
     setPace(preset.pace);
     setPitch(preset.pitch);
 
-    if (preset.languageCode) {
+    // If custom user-created preset explicitly specified a voice, apply it
+    if (!preset.isSystem && preset.voiceId) {
+      const foundVoice = GEMINI_VOICES.find(
+        (v) => v.id.toLowerCase() === preset.voiceId.toLowerCase()
+      );
+      if (foundVoice) {
+        setSelectedVoice(foundVoice);
+      }
+    }
+
+    // Only switch language if preset is an explicit regional language preset (e.g. Kanglish, Hinglish)
+    if (preset.languageCode && preset.languageCode !== 'en') {
       const foundLang = LANGUAGES.find((l) => l.code === preset.languageCode);
       if (foundLang) {
         setSelectedLanguage(foundLang);
@@ -200,17 +333,40 @@ export default function App() {
   };
 
   // Main voice synthesis handler - guarantees authentic Gemini AI Voice
-  const handleGenerateVoice = async () => {
-    if (!script.trim()) {
+  const handleGenerateVoice = async (overrideParams?: {
+    script?: string;
+    voice?: VoiceOption;
+    language?: LanguageOption;
+    emotion?: EmotionOption;
+    pace?: number;
+    pitch?: PitchLevel;
+    title?: string;
+  }) => {
+    const targetScript = overrideParams?.script !== undefined ? overrideParams.script : script;
+    const targetVoice = overrideParams?.voice || selectedVoice;
+    const targetLanguage = overrideParams?.language || selectedLanguage;
+    const targetEmotion = overrideParams?.emotion || selectedEmotion;
+    const targetPace = overrideParams?.pace !== undefined ? overrideParams.pace : pace;
+    const targetPitch = overrideParams?.pitch || pitch;
+
+    if (!targetScript.trim()) {
       setErrorMessage('Please enter or paste a script to generate voice-over.');
+      return;
+    }
+
+    if (cooldownSeconds > 0 || (!customApiKey && sessionQuota <= 0)) {
+      setErrorMessage(
+        `Session quota is currently cooling down (${cooldownSeconds}s remaining). Please wait until the cooldown period finishes.`
+      );
       return;
     }
 
     setIsGenerating(true);
     setErrorMessage(null);
+    setCooldownReadyNotification(false);
 
     try {
-      const sections = parseScriptSections(script);
+      const sections = parseScriptSections(targetScript);
       if (sections.length === 0) {
         throw new Error('Please enter or paste a script to generate voice-over.');
       }
@@ -233,11 +389,11 @@ export default function App() {
           headers,
           body: JSON.stringify({
             script: sanitizedScript,
-            voice: selectedVoice.id,
-            language: selectedLanguage.code,
-            emotion: selectedEmotion.name,
-            pace,
-            pitch,
+            voice: targetVoice.id,
+            language: targetLanguage.code,
+            emotion: targetEmotion.name,
+            pace: targetPace,
+            pitch: targetPitch,
           }),
         });
 
@@ -245,8 +401,10 @@ export default function App() {
 
         if (!response.ok || !data.success || !data.audioBase64) {
           if (response.status === 429 || data.error?.includes('cooling down') || data.retryAfterSec) {
-            const waitTime = data.retryAfterSec || 25;
+            const waitTime = data.retryAfterSec || 30;
             setCooldownSeconds(waitTime);
+            setSessionQuota(0); // Quota strictly locks to 0% during cooldown
+            setIsCooldownBannerDismissed(false);
             return;
           }
           throw new Error(data.error || 'Voice synthesis failed. Please try again.');
@@ -254,24 +412,37 @@ export default function App() {
 
         // Successful audio generation for this section
         setCooldownSeconds(0);
+        setCooldownReadyNotification(false);
+        setIsCooldownBannerDismissed(false);
+        if (!customApiKey) {
+          setSessionQuota((prev) => {
+            const next = Math.max(0, prev - 20);
+            if (next === 0) {
+              setCooldownSeconds(30);
+              setIsCooldownBannerDismissed(false);
+            }
+            return next;
+          });
+        }
         const wavArrayBuffer = base64ToWavArrayBuffer(data.audioBase64, data.mimeType);
-        const processed = await processAudio(wavArrayBuffer, pace, pitch);
+        const processed = await processAudio(wavArrayBuffer, targetPace, targetPitch);
         const audioUrl = URL.createObjectURL(processed.wavBlob);
-        const safeVoice = selectedVoice.id.toLowerCase();
-        const safeEmotion = selectedEmotion.id.replace(/[^a-z0-9]/gi, '_').toLowerCase();
-        const safeLang = selectedLanguage.code;
-        const safeTitle = section.title.replace(/[^a-z0-9]/gi, '_').toLowerCase();
-        const fileName = `vox_${safeVoice}_${safeTitle}_${safeLang}_${Math.round(pace * 100)}pct.wav`;
+        const safeVoice = targetVoice.id.toLowerCase();
+        const safeEmotion = targetEmotion.id.replace(/[^a-z0-9]/gi, '_').toLowerCase();
+        const safeLang = targetLanguage.code;
+        const takeTitle = overrideParams?.title || section.title;
+        const safeTitle = takeTitle.replace(/[^a-z0-9]/gi, '_').toLowerCase();
+        const fileName = `vox_${safeVoice}_${safeTitle}_${safeLang}_${Math.round(targetPace * 100)}pct.wav`;
 
         const createdRecord: GeneratedVoiceRecord = {
           id: `take_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
           timestamp: Date.now(),
           script: sanitizedScript,
-          voice: selectedVoice.id,
-          language: selectedLanguage.name,
-          emotion: selectedEmotion.name,
-          pace,
-          pitch,
+          voice: targetVoice.id,
+          language: targetLanguage.name,
+          emotion: targetEmotion.name,
+          pace: targetPace,
+          pitch: targetPitch,
           audioUrl,
           wavBlob: processed.wavBlob,
           mp3Blob: processed.mp3Blob,
@@ -280,7 +451,7 @@ export default function App() {
           fileSizeBytes: processed.wavBlob.size,
           fileName,
           source: 'gemini',
-          title: section.title,
+          title: takeTitle,
         };
 
         newTakes.push(createdRecord);
@@ -299,7 +470,7 @@ export default function App() {
     }
   };
 
-  // Timer countdown and automated retry execution
+  // Timer countdown without erratic auto-retry loops
   useEffect(() => {
     if (cooldownSeconds <= 0) return;
 
@@ -307,8 +478,10 @@ export default function App() {
       setCooldownSeconds((prev) => {
         if (prev <= 1) {
           clearInterval(timer);
-          // Automatically trigger retry when cooldown hits 0
-          handleGenerateVoice();
+          // Cooldown finished: cleanly restore quota to 100% and notify user
+          setSessionQuota(100);
+          setCooldownReadyNotification(true);
+          setIsCooldownBannerDismissed(false);
           return 0;
         }
         return prev - 1;
@@ -370,6 +543,35 @@ export default function App() {
         </div>
 
         <div className="flex items-center gap-2.5 flex-wrap">
+          {/* User Auth Section */}
+          {currentUser ? (
+            <div className="flex items-center gap-2 bg-neutral-900/90 border border-neutral-700/60 px-3 py-1.5 rounded-md">
+              {currentUser.photoURL ? (
+                <img src={currentUser.photoURL} alt="Avatar" className="w-5 h-5 rounded-full object-cover" />
+              ) : (
+                <div className="w-5 h-5 rounded-full bg-indigo-600 flex items-center justify-center text-white text-[0.65rem] font-bold">
+                  {currentUser.email?.[0]?.toUpperCase() || 'U'}
+                </div>
+              )}
+              <span className="text-xs text-neutral-200 font-medium hidden sm:inline">{currentUser.displayName || currentUser.email}</span>
+              <button
+                type="button"
+                onClick={handleSignOut}
+                className="text-xs text-neutral-400 hover:text-white ml-2 underline cursor-pointer"
+              >
+                Sign Out
+              </button>
+            </div>
+          ) : (
+            <button
+              type="button"
+              onClick={handleSignIn}
+              className="btn bg-indigo-600 hover:bg-indigo-500 text-white font-medium px-3 py-1.5 text-xs flex items-center gap-1.5 rounded-[4px] transition-colors"
+            >
+              <span>Sign In / Sign Up</span>
+            </button>
+          )}
+
           {/* Custom API Key Button */}
           <button
             type="button"
@@ -380,6 +582,49 @@ export default function App() {
             <Key className="h-3.5 w-3.5" />
             <span>{customApiKey ? 'Custom Key Active' : 'API Key'}</span>
           </button>
+
+          {/* Session Quota Meter (0-100% scale) */}
+          <div
+            className="flex items-center gap-2 bg-neutral-900/90 border border-neutral-700/60 px-3 py-1.5 rounded-md"
+            title={
+              customApiKey
+                ? 'Custom Gemini API Key Active — Unlimited Session Generations'
+                : cooldownSeconds > 0 || sessionQuota <= 0
+                ? `Session quota is 0% (Cooling down: ${cooldownSeconds}s remaining). Generation is blocked until ready.`
+                : `Session quota remaining: ${sessionQuota}%`
+            }
+          >
+            <span className="text-[11px] text-neutral-300 font-medium hidden sm:inline">Session Quota:</span>
+            <div className="w-20 bg-neutral-800 h-2 rounded-full overflow-hidden border border-white/5">
+              <div
+                className={`h-full transition-all duration-300 ${
+                  customApiKey
+                    ? 'bg-emerald-500'
+                    : cooldownSeconds > 0 || sessionQuota <= 0
+                    ? 'bg-rose-500 animate-pulse'
+                    : sessionQuota > 50
+                    ? 'bg-emerald-500'
+                    : sessionQuota > 20
+                    ? 'bg-amber-500'
+                    : 'bg-rose-500'
+                }`}
+                style={{
+                  width: `${customApiKey ? 100 : cooldownSeconds > 0 || sessionQuota <= 0 ? 0 : sessionQuota}%`,
+                }}
+              />
+            </div>
+            <span
+              className={`font-mono-code text-[0.65rem] font-bold ${
+                cooldownSeconds > 0 || sessionQuota <= 0 ? 'text-rose-400' : 'text-neutral-200'
+              }`}
+            >
+              {customApiKey
+                ? '100%'
+                : cooldownSeconds > 0 || sessionQuota <= 0
+                ? `0% (${cooldownSeconds}s)`
+                : `${sessionQuota}%`}
+            </span>
+          </div>
 
           <button
             type="button"
@@ -407,23 +652,23 @@ export default function App() {
       <main className="grid grid-cols-1 lg:grid-cols-[60%_40%] flex-1 border-b-2 border-[var(--ink-faint)] overflow-hidden">
         {/* Left Pane: Script Editor & Production Output */}
         <section className="editor-pane p-5 sm:p-8 lg:border-r-2 lg:border-[var(--ink-faint)] overflow-y-auto space-y-6">
-          {/* Active Automated Quota Cooldown Banner */}
-          {cooldownSeconds > 0 && (
-            <div className="rounded-[4px] border border-indigo-500/40 bg-indigo-950/40 p-4 backdrop-blur-md">
+          {/* Active Cooling Down Banner */}
+          {cooldownSeconds > 0 && !isCooldownBannerDismissed && (
+            <div className="rounded-[4px] border border-amber-500/40 bg-amber-950/40 p-4 backdrop-blur-md">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                 <div className="flex items-start gap-3">
-                  <Clock className="h-5 w-5 animate-spin text-indigo-400 shrink-0 mt-0.5" />
+                  <Clock className="h-5 w-5 animate-spin text-amber-400 shrink-0 mt-0.5" />
                   <div>
                     <div className="flex items-center gap-2">
                       <span className="font-semibold text-white text-xs">
-                        Gemini TTS Quota Cooling Down
+                        Session Quota Cooling Down (0% Available)
                       </span>
-                      <span className="font-mono-code text-[0.62rem] text-indigo-300 bg-indigo-500/20 px-1.5 py-0.5 rounded-[2px]">
-                        Retrying in {cooldownSeconds}s
+                      <span className="font-mono-code text-[0.62rem] text-amber-300 bg-amber-500/20 px-1.5 py-0.5 rounded-[2px]">
+                        Restoring in {cooldownSeconds}s
                       </span>
                     </div>
-                    <p className="mt-0.5 text-xs text-indigo-200/80">
-                      Shared quota resets automatically, or enter your own free Gemini key for instant synthesis.
+                    <p className="mt-0.5 text-xs text-amber-200/80">
+                      Audio generation is temporarily paused while quota recovers. You will be notified the instant quota is restored. Or enter your own free Gemini key for unlimited generation.
                     </p>
                   </div>
                 </div>
@@ -432,14 +677,63 @@ export default function App() {
                   <button
                     type="button"
                     onClick={() => setIsApiKeyModalOpen(true)}
-                    className="btn btn-primary text-xs py-1.5 px-3 w-auto"
+                    className="btn btn-primary text-xs py-1.5 px-3 w-auto bg-amber-600 hover:bg-amber-500 text-white"
                   >
                     Enter Free API Key
                   </button>
                   <button
                     type="button"
-                    onClick={() => setCooldownSeconds(0)}
+                    onClick={() => setIsCooldownBannerDismissed(true)}
                     className="p-1 rounded text-slate-400 hover:text-white"
+                    title="Dismiss cooldown banner"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Notification: Cooldown Finished & Quota Restored */}
+          {cooldownReadyNotification && cooldownSeconds === 0 && (
+            <div className="rounded-[4px] border border-emerald-500/50 bg-emerald-950/50 p-4 backdrop-blur-md animate-fade-in shadow-lg">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div className="flex items-start gap-3">
+                  <div className="p-1 rounded-full bg-emerald-500/20 text-emerald-400 mt-0.5">
+                    <CheckCircle2 className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <span className="font-semibold text-white text-xs">
+                        Cooldown Complete — Session Quota Restored to 100%!
+                      </span>
+                      <span className="font-mono-code text-[0.62rem] text-emerald-300 bg-emerald-500/20 px-1.5 py-0.5 rounded-[2px]">
+                        Ready to Generate
+                      </span>
+                    </div>
+                    <p className="mt-0.5 text-xs text-emerald-200/90">
+                      The cooling down period has ended. You can now safely generate your voice-over audio.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2 shrink-0">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setCooldownReadyNotification(false);
+                      handleGenerateVoice();
+                    }}
+                    className="btn bg-emerald-600 hover:bg-emerald-500 text-white text-xs py-1.5 px-3 flex items-center gap-1.5 font-medium shadow-sm transition"
+                  >
+                    <Mic className="h-3.5 w-3.5" />
+                    <span>Generate Audio Now</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setCooldownReadyNotification(false)}
+                    className="p-1 rounded text-slate-400 hover:text-white"
+                    title="Dismiss notification"
                   >
                     <X className="h-4 w-4" />
                   </button>
@@ -507,6 +801,17 @@ export default function App() {
             </div>
           </div>
 
+          {/* Voice Match & Clip Analysis Card */}
+          <VoiceMatchSection
+            customApiKey={customApiKey}
+            onApplySettings={handleApplyMatchedSettings}
+            onGenerateMatchedScript={handleGenerateMatchedScript}
+            allVoices={GEMINI_VOICES}
+            isCoolingDown={cooldownSeconds > 0 || (!customApiKey && sessionQuota <= 0)}
+            cooldownSeconds={cooldownSeconds}
+            sessionQuota={customApiKey ? 100 : sessionQuota}
+          />
+
           {/* 3. Audio Preview & Export Card */}
           <div className="card space-y-3 p-4 bg-[#0d0f15]/80 border border-white/10 rounded-lg shadow-sm">
             <div className="flex items-center justify-between border-b border-white/10 pb-2">
@@ -535,26 +840,58 @@ export default function App() {
           {/* 4. Production History Card (if any) */}
           {history.length > 0 && (
             <div className="card space-y-3 p-4 bg-[#0d0f15]/80 border border-white/10 rounded-lg shadow-sm">
-              <div className="flex items-center justify-between border-b border-white/10 pb-2">
+              <div className="flex flex-wrap items-center justify-between gap-2 border-b border-white/10 pb-2">
                 <div className="flex items-center gap-2">
                   <History className="h-4 w-4 text-indigo-400" />
                   <div>
-                    <h3 className="text-xs font-semibold uppercase tracking-wider text-white">Production History & Takes</h3>
-                    <p className="text-[11px] text-[var(--ink-muted)]">Recently generated voice takes ({history.length})</p>
+                    <h3 className="text-xs font-semibold uppercase tracking-wider text-white">Production History & Takes ({history.length})</h3>
+                    <p className="text-[11px] text-[var(--ink-muted)]">Select multiple takes to download as ZIP or delete rows</p>
                   </div>
                 </div>
-                <button
-                  type="button"
-                  onClick={() => setHistory([])}
-                  className="font-mono-code text-[0.62rem] text-[var(--ink-muted)] hover:text-rose-400 transition"
-                >
-                  Clear all
-                </button>
+
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={toggleSelectAllTakes}
+                    className="btn btn-secondary py-1 px-2.5 text-[0.65rem] flex items-center gap-1"
+                  >
+                    {selectedTakeIds.size === history.length ? (
+                      <CheckSquare className="h-3.5 w-3.5 text-indigo-400" />
+                    ) : (
+                      <Square className="h-3.5 w-3.5" />
+                    )}
+                    <span>{selectedTakeIds.size === history.length ? 'Deselect All' : 'Select All'}</span>
+                  </button>
+
+                  {selectedTakeIds.size > 0 && (
+                    <button
+                      type="button"
+                      onClick={handleDownloadSelectedZip}
+                      className="btn btn-primary py-1 px-2.5 text-[0.65rem] flex items-center gap-1 bg-indigo-600 hover:bg-indigo-500 text-white"
+                      title="Download selected takes as a ZIP archive"
+                    >
+                      <Archive className="h-3.5 w-3.5" />
+                      <span>Download ZIP ({selectedTakeIds.size})</span>
+                    </button>
+                  )}
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setHistory([]);
+                      setSelectedTakeIds(new Set());
+                    }}
+                    className="font-mono-code text-[0.62rem] text-[var(--ink-muted)] hover:text-rose-400 transition"
+                  >
+                    Clear all
+                  </button>
+                </div>
               </div>
 
               <div className="space-y-1.5 max-h-[300px] overflow-y-auto pr-1">
                 {history.map((take) => {
                   const isSelected = currentTake?.id === take.id;
+                  const isChecked = selectedTakeIds.has(take.id);
                   return (
                     <div
                       key={take.id}
@@ -564,6 +901,21 @@ export default function App() {
                           : 'bg-black/30 border-[var(--ink-faint)] hover:border-slate-700'
                       }`}
                     >
+                      <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={() => toggleSelectTake(take.id)}
+                          className="text-slate-400 hover:text-white"
+                          title="Select take for ZIP bundle"
+                        >
+                          {isChecked ? (
+                            <CheckSquare className="h-4 w-4 text-indigo-400" />
+                          ) : (
+                            <Square className="h-4 w-4 text-slate-500" />
+                          )}
+                        </button>
+                      </div>
+
                       <div
                         className="min-w-0 flex-1 cursor-pointer"
                         onClick={() => handlePlayTake(take)}
@@ -618,6 +970,14 @@ export default function App() {
                         >
                           <Download className="h-3 w-3" />
                           <span>WAV</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteTake(take.id)}
+                          className="btn btn-secondary py-1 px-1.5 text-[0.62rem] text-rose-400 hover:text-rose-200 hover:border-rose-800"
+                          title="Delete row from preview & history"
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
                         </button>
                       </div>
                     </div>
@@ -738,19 +1098,28 @@ export default function App() {
           {/* Big Primary Generate Action Button */}
           <button
             type="button"
-            disabled={isGenerating || cooldownSeconds > 0}
-            onClick={handleGenerateVoice}
-            className="btn btn-primary font-syne font-extrabold text-sm tracking-wider"
+            disabled={isGenerating || cooldownSeconds > 0 || (!customApiKey && sessionQuota <= 0)}
+            onClick={() => handleGenerateVoice()}
+            className={`btn font-syne font-extrabold text-sm tracking-wider ${
+              isGenerating || cooldownSeconds > 0 || (!customApiKey && sessionQuota <= 0)
+                ? 'bg-neutral-800 text-neutral-400 border border-neutral-700 cursor-not-allowed opacity-80'
+                : 'btn-primary'
+            }`}
+            title={
+              cooldownSeconds > 0 || (!customApiKey && sessionQuota <= 0)
+                ? `Session quota is cooling down (${cooldownSeconds}s remaining). Generation is blocked until ready.`
+                : 'Generate audio with selected voice and settings'
+            }
           >
             {isGenerating ? (
               <>
                 <div className="h-4 w-4 animate-spin rounded-full border-2 border-white/20 border-t-white" />
                 <span>SYNTHESIZING {selectedVoice.name.toUpperCase()}...</span>
               </>
-            ) : cooldownSeconds > 0 ? (
+            ) : cooldownSeconds > 0 || (!customApiKey && sessionQuota <= 0) ? (
               <>
-                <Clock className="h-4 w-4 animate-spin text-indigo-200" />
-                <span>AUTO-RETRY IN {cooldownSeconds}S...</span>
+                <Clock className="h-4 w-4 animate-spin text-amber-300" />
+                <span>COOLING DOWN ({cooldownSeconds}S) • 0% QUOTA</span>
               </>
             ) : (
               <>

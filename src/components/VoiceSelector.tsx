@@ -89,7 +89,8 @@ export const VoiceSelector: React.FC<VoiceSelectorProps> = ({
 
     const emotionName = currentEmotion?.name || 'Natural';
     const emotionId = currentEmotion?.id || 'default';
-    const cacheKey = `${voice.id}_${emotionId}_${Math.round(pace * 100)}_${pitch}`;
+    const langCode = currentLanguage?.code || 'en-in';
+    const cacheKey = `${voice.id}_${langCode}_${emotionId}_${Math.round(pace * 100)}_${pitch}`;
 
     // Helper to start playback on an audio element
     const startPlayback = (audioUrl: string) => {
@@ -141,6 +142,7 @@ export const VoiceSelector: React.FC<VoiceSelectorProps> = ({
         body: JSON.stringify({
           script: voice.sampleText,
           voice: voice.id,
+          language: langCode,
           emotion: emotionName,
           pace,
           pitch,
